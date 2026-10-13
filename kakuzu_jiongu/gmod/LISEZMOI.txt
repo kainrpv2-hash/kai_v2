@@ -65,15 +65,20 @@ Commandes console (admin / serveur)
 Fiches techniques
 -----------------
   Modele          Triangles*  Sommets  Os   Sequences
-  jiongu_katon    28 110      22 128   15   idle (ACT_IDLE), walk (ACT_WALK), run (ACT_RUN),
-  jiongu_futon    26 358      21 310   21   attack (ACT_RANGE_ATTACK1),
-  jiongu_raiton   33 032      25 124   17   attack_melee (ACT_MELEE_ATTACK1)
-  jiongu_suiton   22 698      17 194   15
+  jiongu_katon    26 834      21 468   15   idle (ACT_IDLE), walk (ACT_WALK), run (ACT_RUN),
+  jiongu_futon    25 066      20 636   21   attack (ACT_RANGE_ATTACK1),
+  jiongu_raiton   26 318      22 080   17   attack_melee (ACT_MELEE_ATTACK1)
+  jiongu_suiton   21 490      16 590   15
   * contour d'encre inclus (environ 45 % des triangles).
   Skins : 0 = masque intact, 1 = masque fissure (le PNJ passe en skin 1 sous 35 % de vie).
   Point d'attache "mouth" au centre du masque (depart des techniques).
   Echelle : 1 unite = 1 pouce. Hauteurs : Feu 3,1 m (123 u), Vent 2,9 m ailes comprises (112 u),
-  Foudre 3,6 m crete comprise (140 u), Eau 2,9 m (115 u). Un joueur fait 72 u.
+  Foudre 3,5 m crete comprise (137 u), Eau 2,9 m (116 u). Un joueur fait 72 u.
+
+Masques
+-------
+  Redessines point par point sur l'episode 84 (capture HD) : silhouette exacte (cornes et
+  pans de la Foudre compris), traits d'encre, couleurs et ombre grise de l'anime.
 
 Style
 -----

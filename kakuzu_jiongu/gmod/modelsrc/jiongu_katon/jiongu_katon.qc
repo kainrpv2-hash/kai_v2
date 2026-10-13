@@ -5,8 +5,8 @@ $cdmaterials "models/kakuzu_jiongu/"
 $surfaceprop "flesh"
 // positions below are centred / symmetric so studiomdl's default 90 deg rotation cannot misplace them
 $illumposition 0 0 57.3
-$eyeposition 0 0 92.6
-$bbox -63.4 -63.4 0 63.4 63.4 123.4
+$eyeposition 0 0 91.8
+$bbox -61.8 -61.8 0 61.8 61.8 124.1
 $cbox -49.7 -49.7 0 49.7 49.7 114.5
 
 $body body "jiongu_katon_ref.smd"
@@ -19,7 +19,7 @@ $texturegroup "skinfamilies"
 }
 
 // jutsu spawn point at the mask
-$attachment "mouth" "head" 0.02 -0.69 32.25 rotate 0 0 0
+$attachment "mouth" "head" -0.26 -1.57 31.62 rotate 0 0 0
 
 $sequence idle "jiongu_katon_idle.smd" loop fps 30 activity ACT_IDLE 1
 $sequence walk "jiongu_katon_walk.smd" loop fps 30 activity ACT_WALK 1

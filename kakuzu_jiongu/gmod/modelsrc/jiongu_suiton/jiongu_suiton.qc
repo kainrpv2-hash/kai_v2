@@ -6,7 +6,7 @@ $surfaceprop "flesh"
 // positions below are centred / symmetric so studiomdl's default 90 deg rotation cannot misplace them
 $illumposition 0 0 54.0
 $eyeposition 0 0 94.5
-$bbox -48.2 -48.2 0 48.2 48.2 115.3
+$bbox -46.8 -46.8 0 46.8 46.8 115.7
 $cbox -38.3 -38.3 0 38.3 38.3 108.0
 
 $body body "jiongu_suiton_ref.smd"
@@ -19,7 +19,7 @@ $texturegroup "skinfamilies"
 }
 
 // jutsu spawn point at the mask
-$attachment "mouth" "head" -0.01 9.84 24.53 rotate 0 0 0
+$attachment "mouth" "head" 0.11 9.74 23.73 rotate 0 0 0
 
 $sequence idle "jiongu_suiton_idle.smd" loop fps 30 activity ACT_IDLE 1
 $sequence walk "jiongu_suiton_walk.smd" loop fps 30 activity ACT_WALK 1

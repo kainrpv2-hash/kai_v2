@@ -188,7 +188,7 @@ def mat_mask(name, col_img, nrm_img=None, rough=0.42):
     if nrm_img:
         _normal(nt, image(nrm_img, True), b, 0.6)
     b.inputs["Roughness"].default_value = rough
-    b.inputs["Specular IOR Level"].default_value = 0.5
+    b.inputs["Specular IOR Level"].default_value = 0.3
     m.use_backface_culling = True
     return m
 
@@ -446,6 +446,87 @@ def mask_mesh(name, outline, relief, M, rings=48, segs=128, thick=0.018, y_off=0
         for k in p.loop_indices:
             uvl.data[k].uv = uv_all[me.loops[k].vertex_index]
     me.shade_smooth()
+    return link(bpy.data.objects.new(name, me))
+
+
+def mask_from_sil(name, sil_path, col_path, mpt, depth=0.05, thick=0.016, res=200, boundary=180, spacing=None):
+    """Mask mesh built from its silhouette (horns, flaps and all), with a rounded rim, a gentle facial dome and
+    relief read from the painted texture (raised ochre nose, recessed mouth). Local space: x right, z up,
+    the face looks towards -Y. UV = the texture square (planar front projection)."""
+    from PIL import Image
+    from scipy import ndimage as ndi
+    from scipy.spatial import Delaunay
+    from skimage import measure
+    sil = np.asarray(Image.open(sil_path).convert("L").resize((res, res), Image.BILINEAR)).astype(float) / 255
+    col = np.asarray(Image.open(col_path).convert("RGB").resize((res, res), Image.BILINEAR)).astype(float)
+    inside = sil > 0.5
+    px = mpt / res                                       # metres per working pixel
+    dist = ndi.distance_transform_edt(inside) * px       # metres to the edge
+    r, g, b = col[..., 0], col[..., 1], col[..., 2]
+    nose = ndi.gaussian_filter(((r > 180) & (r - b > 80)).astype(float), 2.5)
+    mouth = ndi.gaussian_filter(((r + g + b) / 3 < 70).astype(float) * inside, 2.0)
+    ys, xs = np.nonzero(inside)
+    cy, cx = (ys.min() + ys.max()) / 2, (xs.min() + xs.max()) / 2
+    ax, az = (xs.max() - xs.min()) / 2 * 1.25, (ys.max() - ys.min()) / 2 * 1.25
+
+    def height(rr, cc):
+        rr = np.clip(rr, 0, res - 1)
+        cc = np.clip(cc, 0, res - 1)
+        dd = ndi.map_coordinates(dist, [rr, cc], order=1)
+        rim = 0.006 * (1 - np.exp(-dd / 0.006))         # slightly rounded edge (anime masks read flat)
+        q = 1 - ((cc - cx) / ax) ** 2 - ((rr - cy) / az) ** 2
+        dome = depth * np.sqrt(np.clip(q, 0, 1))        # curves back towards the edges like a face mask
+        n = ndi.map_coordinates(nose, [rr, cc], order=1) * 0.018
+        mo = ndi.map_coordinates(mouth, [rr, cc], order=1) * -0.006
+        return rim + dome + n + mo
+
+    cont = max(measure.find_contours(sil, 0.5), key=len)       # (row, col)
+    seg = np.cumsum(np.r_[0, np.linalg.norm(np.diff(cont, axis=0), axis=1)])
+    tb = np.linspace(0, seg[-1], boundary, endpoint=False)
+    bnd = np.stack([np.interp(tb, seg, cont[:, 0]), np.interp(tb, seg, cont[:, 1])], 1)
+    sp_ = spacing or (seg[-1] / boundary) * 1.6
+    gy, gx = np.mgrid[0:res:sp_, 0:res:sp_]
+    gpts = np.stack([gy.ravel(), gx.ravel()], 1)
+    ok = ndi.map_coordinates(dist, gpts.T, order=1) > sp_ * px * 0.7
+    pts2 = np.concatenate([bnd, gpts[ok]])
+    tri = Delaunay(pts2).simplices
+    cen = pts2[tri].mean(1)
+    tri = tri[ndi.map_coordinates(sil, cen.T, order=1) > 0.5]
+    nb = len(bnd)
+    u = pts2[:, 1] / res
+    v = 1 - pts2[:, 0] / res
+    x = (u - 0.5) * mpt
+    z = (v - 0.5) * mpt
+    hgt = height(pts2[:, 0], pts2[:, 1])
+    hgt[:nb] = height(bnd[:, 0], bnd[:, 1]) * 0.35      # the very edge sits back
+    front = np.stack([x, -hgt, z], 1)
+    back = front.copy()
+    back[:, 1] += thick
+    nv = len(front)
+    # orient front triangles towards -Y
+    a, b_, c = front[tri[:, 0]], front[tri[:, 1]], front[tri[:, 2]]
+    fn = np.cross(b_ - a, c - a)
+    tri = np.where((fn[:, 1] > 0)[:, None], tri[:, ::-1], tri)
+    faces = [list(t) for t in tri] + [[t[2] + nv, t[1] + nv, t[0] + nv] for t in tri]
+    # rim along the boundary loop (boundary points are the first nb vertices, in contour order)
+    rim = [[i, (i + 1) % nb, (i + 1) % nb + nv, i + nv] for i in range(nb)]
+    # make the rim face outwards
+    p0, p1, p2 = front[0], front[1], back[1]
+    rn = np.cross(p1 - p0, p2 - p0)
+    out = front[0] - front[:nb].mean(0)
+    if rn @ out < 0:
+        rim = [f[::-1] for f in rim]
+    faces += rim
+    allv = np.concatenate([front, back])
+    uv_all = np.concatenate([np.stack([u, v], 1)] * 2)
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(allv.tolist(), [], faces)
+    uvl = me.uv_layers.new(name="UVMap")
+    vi = np.empty(len(me.loops), np.int32)
+    me.loops.foreach_get("vertex_index", vi)
+    uvl.data.foreach_set("uv", uv_all[vi].astype(np.float32).ravel())
+    me.shade_smooth()
+    me.validate()
     return link(bpy.data.objects.new(name, me))
 
 

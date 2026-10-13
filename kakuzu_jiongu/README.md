@@ -4,12 +4,19 @@ Modèles 3D riggés et animés des quatre monstres masqués de Kakuzu (Naruto Sh
 
 Fan-art non commercial. Naruto © Masashi Kishimoto / Shueisha / Studio Pierrot.
 
-| Monstre | Élément | Technique | Hauteur (fourrure incluse) | Tris HQ | Tris LOW | Os |
-|---|---|---|---|---|---|---|
-| `Jiongu_Katon` | 火 Feu | Katon : Zukokku 頭刻苦 | ≈ 3,5 m | 97 600 | 16 440 | 15 |
-| `Jiongu_Futon` | 風 Vent | Fūton : Atsugai 圧害 | ≈ 1,6 m (ailes : 2,9 m) | 85 904 | 19 688 | 21 |
-| `Jiongu_Raiton` | 雷 Foudre | Raiton : Gian 偽暗 | ≈ 3,9 m (envergure : 4,7 m) | 109 200 | 18 904 | 17 |
-| `Jiongu_Suiton` | 水 Eau | aucune (détruit avant d'attaquer) | ≈ 3,3 m | 75 816 | 12 888 | 15 |
+| Monstre | Élément | Technique | Hauteur (fourrure incluse) | Tris HQ | Tris LOW | Tris GMod* | Os |
+|---|---|---|---|---|---|---|---|
+| `Jiongu_Katon` | 火 Feu | Katon : Zukokku 頭刻苦 | ≈ 3,2 m | 94 252 | 15 832 | 26 834 | 15 |
+| `Jiongu_Futon` | 風 Vent | Fūton : Atsugai 圧害 | ≈ 1,6 m (ailes : 2,9 m) | 82 466 | 18 988 | 25 066 | 21 |
+| `Jiongu_Raiton` | 雷 Foudre | Raiton : Gian 偽暗 | ≈ 3,5 m (envergure : 4,7 m) | 93 972 | 15 508 | 26 318 | 17 |
+| `Jiongu_Suiton` | 水 Eau | aucune (détruit avant d'attaquer) | ≈ 2,9 m | 72 562 | 12 220 | 21 490 | 15 |
+
+\* contour d'encre inclus.
+
+**Masques :** redessinés point par point sur une capture HD de l'épisode 84.
+- La silhouette exacte est extraite de l'image : cornes en croissant et pans de la Foudre compris.
+- Les traits sont des courbes vectorielles aimantées sur les traits de l'anime.
+- Les couleurs mesurées et l'ombre grise viennent aussi de la capture.
 
 Kakuzu mesure 1,85 m. Les monstres sont à l'échelle réelle : 1 unité = 1 mètre.
 
@@ -128,9 +135,13 @@ Le dossier `sources/` contient le pipeline complet. Il faut Python 3.13 avec `bp
 
 ```
 python tex_gen.py              # textures fourrure + corps
-python masks.py                # peinture des 4 masques
-python build.py katon hq       # katon | futon | raiton | suiton, hq | low
+python tex_gmod.py             # textures cel-shading de la version GMod
+python mask_vector.py          # les 4 masques, redessinés sur la capture de l'épisode 84
+python build.py katon hq       # katon | futon | raiton | suiton, hq | low | gmod
+python gmod_package.py tex_gmod GMOD gmod   # paquet Garry's Mod (QC/SMD/VTF/VMT)
 python render.py out.png 1080 1350 64 "x,y,z,tx,ty,tz,focale" "katon:0:0:0:Idle:1"
 ```
 
-Les formes sont dans `creatures.py` : ellipsoïdes et cônes, avec un os par primitive. Les dessins des masques sont dans `masks.py`.
+`mask_trace.py` a besoin de la capture HD de l'épisode 84, qui n'est pas fournie dans le dossier.
+
+Les formes sont dans `creatures.py` : ellipsoïdes et cônes, avec un os par primitive. Les dessins des masques sont dans `mask_vector.py`.

@@ -2,6 +2,7 @@
 
 usage: python build.py <katon|futon|raiton|suiton> [hq|low]
 """
+import json
 import math
 import os
 import sys
@@ -15,7 +16,6 @@ import numpy as np  # noqa: E402
 from mathutils import Matrix, Quaternion, Vector  # noqa: E402
 
 import kz_blender as kb  # noqa: E402
-import masks as mk  # noqa: E402
 from creatures import ALL  # noqa: E402
 
 OUT = os.path.join(HERE, "out")
@@ -45,31 +45,25 @@ def mask_frame(sp):
     return c, R, m["scale"]
 
 
+def mask_info(kind):
+    meta = json.load(open(os.path.join(kb.TEX, f"mask_{kind}_meta.json")))
+    return meta["metres_per_texture"], os.path.join(kb.TEX, f"mask_{kind}_sil.png"), os.path.join(kb.TEX, f"mask_{kind}_col.jpg")
+
+
 def build_mask(sp, c, R, scale, lod):
+    """Mask redrawn from the ep.84 frame (mask_vector.py): one mesh from the real silhouette, horns/flaps included."""
     kind = sp.mask["kind"]
-    res = dict(rings=26, segs=80) if lod == "hq" else dict(rings=12, segs=40)
-    spec = mk.MASK[kind]
-    mat = kb.mat_mask(f"KZ_Mask_{kind}", f"mask_{kind}_col.jpg", None if lod == "gmod" else f"mask_{kind}_nrm.png")
-    parts = [kb.mask_mesh(f"mask_{kind}", spec["outline"], spec["relief"], spec["M"], **res)]
-    if "plate" in spec:
-        pl = spec["plate"]
-        parts.append(kb.mask_mesh(f"plate_{kind}", pl["outline"], pl["relief"], spec["M"], y_off=0.006, thick=0.012, **res))
-        for s in (1, -1):
-            h = kb.horn(f"horn_{s}", (s * 0.105, 0.0, 0.135), (s * 0.85, 0.1, 0.55), 0.2, 0.034,
-                        bend=(-s * 2.2, 0, 1.0), segs=12 if lod == "hq" else 6, ring=12 if lod == "hq" else 7)
-            # horns sample a clean white texel of the mask texture
-            uvl = h.data.uv_layers.new(name="UVMap")
-            u = 0.5
-            vv = 0.12 / (2 * spec["M"]) + 0.5
-            uvl.data.foreach_set("uv", np.tile([u, vv], len(h.data.loops)).astype(np.float32))
-            parts.append(h)
+    mpt, sil, col = mask_info(kind)
+    mat = kb.mat_mask(f"KZ_Mask_{kind}", f"mask_{kind}_col.jpg", None, rough=0.7)
+    hq = lod == "hq"
+    part = kb.mask_from_sil(f"mask_{kind}", sil, col, mpt, depth=0.035 if kind != "lightning" else 0.018,
+                            res=220 if hq else 120, boundary=200 if hq else 96)
     M4 = Matrix.Translation(Vector(c)) @ Matrix(R.tolist()).to_4x4() @ Matrix.Scale(scale, 4)
-    for p in parts:
-        p.matrix_world = M4
-        p.data.materials.append(mat)
-        p.data.transform(p.matrix_world)
-        p.matrix_world = Matrix()
-    return parts
+    part.matrix_world = M4
+    part.data.materials.append(mat)
+    part.data.transform(part.matrix_world)
+    part.matrix_world = Matrix()
+    return [part]
 
 
 # ------------------------------------------------------------------ extras
@@ -143,22 +137,23 @@ def build_fur(sp, body_ob, bone_names, c, R, scale, lod, kind="cards"):
 
     P, N = kb.sample_surface(v, t, n, count, density_fn, rng)
 
-    # mask exclusion + fur radiating outward around the mask
+    # mask exclusion (real silhouette, slightly dilated) + fur radiating outward around the mask
     q = (P - c) @ R / scale
-    spec = mk.MASK[sp.mask["kind"]]
-    outline = spec.get("plate", spec)["outline"]
-    th = np.arctan2(q[:, 2], q[:, 0])
-    rx = np.array([outline(x)[0] for x in th])
-    rz = np.array([outline(x)[1] for x in th])
-    rho = np.sqrt((q[:, 0] / rx) ** 2 + (q[:, 2] / rz) ** 2)
-    front = q[:, 1] < 0.12
-    keep = ~(front & (rho < 1.04))
-    if sp.mask["kind"] == "lightning":  # keep the horns visible
-        keep &= ~(front & (q[:, 2] > 0.1) & (np.abs(q[:, 0]) < 0.3) & (q[:, 2] < 0.42))
-    P, N, q, rho, front = P[keep], N[keep], q[keep], rho[keep], front[keep]
+    mpt, sil_path, _ = mask_info(sp.mask["kind"])
+    from PIL import Image
+    from scipy import ndimage as ndi
+    res = 256
+    sil = np.asarray(Image.open(sil_path).convert("L").resize((res, res), Image.BILINEAR)) > 127
+    out_d = ndi.distance_transform_edt(~sil) * (mpt / res)          # metres outside the mask edge
+    uu = np.clip((q[:, 0] / mpt + 0.5) * res, 0, res - 1)
+    vv = np.clip((0.5 - q[:, 2] / mpt) * res, 0, res - 1)
+    d_out = ndi.map_coordinates(out_d, [vv, uu], order=1)
+    front = q[:, 1] < 0.15
+    keep = ~(front & (d_out < 0.03))
+    P, N, q, d_out, front = P[keep], N[keep], q[keep], d_out[keep], front[keep]
     radial = (R @ np.stack([q[:, 0], np.zeros(len(q)), q[:, 2]], 1).T).T
     radial /= np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-6)
-    flow_w = np.where(front & (rho < 2.2), np.clip((2.2 - rho) / 1.1, 0, 1), 0.0)
+    flow_w = np.where(front & (d_out < 0.28), np.clip(1 - d_out / 0.28, 0, 1), 0.0)
 
     W = sp.body.bone_weights(P, bone_names, tau=0.05)
     dom = np.array([bone_names[i] for i in W.argmax(1)])

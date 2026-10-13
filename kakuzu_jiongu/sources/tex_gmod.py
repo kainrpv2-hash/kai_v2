@@ -3,7 +3,7 @@
 - clump_col.png : opaque charcoal strand texture for the geometric thread clumps (tiles both ways)
 - body_col.png  : body texture lifted to charcoal (never pure black, so the cel ramp and rim light read)
 - fur_atlas_col.png : fringe-fibre cards, same lift
-- mask_<kind>_col.jpg + mask_<kind>_cracked_col.jpg : masks, and a cracked variant (heart nearly spent)
+- masks: see mask_vector.py (redrawn from the ep.84 frame, + cracked variant)
 - outline_col.png : 4x4 ink black
 """
 import math
@@ -109,6 +109,6 @@ def outline():
 clump_texture()
 body_texture()
 fur_texture()
-masks()
+# masks (and their cracked variant) are drawn by mask_vector.py
 outline()
 print("tex_gmod ok", sorted(os.listdir(OUT)))
