@@ -1,0 +1,1304 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rouleau des Jutsu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : une scène 3D plein cadre, un rouleau de techniques à gauche (en dessous sur téléphone). */
+:root {
+  color-scheme: dark;
+  --ink: #10131f;        /* fond de scène, encre indigo */
+  --panel: #161a29;      /* rouleau */
+  --panel-2: #1d2235;    /* survol, carte */
+  --line: #2b3149;
+  --paper: #ece6d6;      /* texte, ton papier */
+  --muted: #9298ae;
+  --seal: #c8452f;       /* tampon hanko, rang S */
+  --rank-c: #7fa784;
+  --rank-b: #5b8fd0;
+  --rank-a: #d0a04a;
+  --rank-s: #c8452f;
+  --el-fire: #ff8a45;
+  --el-wind: #84d6c8;
+  --el-lightning: #aebcff;
+  --el-water: #55b4f2;
+  --el-earth: #c9a066;
+  --el-other: #c5b3ff;
+  --f-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--ink); color: var(--paper); font: 14px/1.5 var(--f-body); overflow: hidden; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--el-lightning); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); }
+.panel { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.brand { padding: 18px 16px 12px; display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { margin: 0; font: 800 22px/1.1 var(--f-display); letter-spacing: .02em; text-wrap: balance; }
+.brand .kanji { font: 600 15px var(--f-display); color: var(--muted); }
+
+.filters { padding: 0 16px 12px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; }
+.tab { flex: 1; border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 6px 0 5px; cursor: pointer; display: grid; justify-items: center; line-height: 1.15; }
+.tab b { font: 800 16px var(--f-display); }
+.tab small { font: 400 10.5px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.tab[aria-pressed="true"] { background: var(--panel-2); border-color: var(--rank-color, var(--paper)); }
+.tab[aria-pressed="true"] b { color: var(--rank-color, var(--paper)); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 2px 10px 2px 6px; cursor: pointer; font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.chip i { font: 600 13px var(--f-display); font-style: normal; color: var(--el); }
+.chip[aria-pressed="true"] { color: var(--paper); border-color: var(--el); background: color-mix(in srgb, var(--el) 12%, transparent); }
+
+.list { list-style: none; margin: 0; padding: 6px 8px 16px; overflow-y: auto; min-height: 0; flex: 1; }
+.rank-head { font: 500 11px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 12px 8px 4px; display: flex; align-items: center; gap: 8px; }
+.rank-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.item { width: 100%; text-align: left; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 6px; border: 1px solid transparent; background: transparent; cursor: pointer; }
+.item:hover { background: var(--panel-2); }
+.item[aria-current="true"] { background: var(--panel-2); border-color: var(--line); }
+.el-seal { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font: 600 15px var(--f-display); color: var(--el); background: color-mix(in srgb, var(--el) 13%, transparent); }
+.item .nm { min-width: 0; }
+.item .nm strong { display: block; font-weight: 500; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item .nm span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank { width: 22px; height: 22px; display: grid; place-items: center; font: 800 12px var(--f-display); color: var(--rank-color); border: 1.5px solid var(--rank-color); border-radius: 4px; }
+.rank.S { background: var(--rank-s); color: var(--paper); border-color: var(--rank-s); }
+.empty { color: var(--muted); padding: 24px 8px; text-align: center; }
+
+.stage { position: relative; min-width: 0; min-height: 0; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hud { position: absolute; top: 12px; right: 12px; font: 400 11.5px var(--f-mono); color: var(--muted); background: color-mix(in srgb, var(--ink) 70%, transparent); padding: 4px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.card { position: absolute; left: 16px; bottom: 16px; width: min(440px, calc(100% - 32px)); background: color-mix(in srgb, var(--panel) 90%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 12px; display: grid; gap: 8px; }
+.card-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.big-rank { width: 46px; height: 46px; display: grid; place-items: center; font: 800 24px var(--f-display); border: 2px solid var(--rank-color); color: var(--rank-color); border-radius: 6px; transform: rotate(-4deg); }
+.big-rank.S { background: var(--rank-s); color: var(--paper); }
+.card h2 { margin: 0; font: 800 18px/1.2 var(--f-display); text-wrap: balance; }
+.card .jp { font: 600 13px var(--f-display); color: var(--el); }
+.card .meta { font-size: 12px; color: var(--muted); }
+.card p { margin: 0; font-size: 13px; color: color-mix(in srgb, var(--paper) 85%, var(--muted)); max-width: 62ch; }
+.fxline { font: 400 11.5px var(--f-mono); color: var(--muted); }
+.fxline b { color: var(--el); font-weight: 500; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-top: 2px; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: 12.5px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--paper); color: var(--ink); border-color: var(--paper); font-weight: 700; }
+.btn[aria-pressed="true"] { border-color: var(--el-lightning); color: var(--el-lightning); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 5px 8px; cursor: pointer; font: 400 11.5px var(--f-mono); color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--panel-2); color: var(--paper); }
+.spacer { flex: 1; }
+.kbd { font: 400 11px var(--f-mono); color: var(--muted); }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 58%) minmax(0, 42%); }
+  .stage { order: -1; }
+  .panel { border-right: 0; border-top: 1px solid var(--line); }
+  .brand { padding: 10px 16px 8px; }
+  .brand h1 { font-size: 18px; }
+  .card { left: 8px; right: 8px; bottom: 8px; width: auto; padding: 10px 12px; gap: 6px; }
+  .card p, .fxline { display: none; }
+  .big-rank { width: 36px; height: 36px; font-size: 19px; }
+  .card h2 { font-size: 15px; }
+  .kbd { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <div class="brand"><h1>Rouleau des Jutsu</h1><span class="kanji">術の巻物</span></div>
+    <div class="filters">
+      <div class="tabs" id="tabs" role="group" aria-label="Rang"></div>
+      <div class="chips" id="chips" role="group" aria-label="Élément"></div>
+    </div>
+    <ul class="list" id="list"></ul>
+  </aside>
+  <main class="stage" id="stage">
+    <div class="hud" id="hud">—</div>
+    <section class="card" id="card" aria-live="polite">
+      <div class="card-top">
+        <div class="big-rank" id="cRank">C</div>
+        <div>
+          <h2 id="cName">—</h2>
+          <div class="jp" id="cJp"></div>
+          <div class="meta" id="cMeta"></div>
+        </div>
+      </div>
+      <p id="cDesc"></p>
+      <div class="fxline" id="cFx"></div>
+      <div class="controls">
+        <button class="btn primary" id="bPlay" type="button">Rejouer</button>
+        <button class="btn" id="bLoop" type="button" aria-pressed="true">Boucle</button>
+        <div class="seg" id="speed" role="group" aria-label="Vitesse">
+          <button type="button" data-s="0.25">0,25×</button>
+          <button type="button" data-s="0.5">0,5×</button>
+          <button type="button" data-s="1" aria-pressed="true">1×</button>
+        </div>
+        <span class="spacer"></span>
+        <span class="kbd">Espace · ↑ ↓</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>window.THREE || document.write('<script src="vendor/three.min.js"><\/script>');</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>(window.THREE && THREE.OrbitControls) || document.write('<script src="vendor/OrbitControls.js"><\/script>');</script>
+<script>
+"use strict";
+/* =====================================================================
+   1. LES TECHNIQUES
+   Pour ajouter ou remplacer une technique, copie une ligne et change :
+   - rank : "C" | "B" | "A" | "S"
+   - el   : "fire" | "wind" | "lightning" | "water" | "earth" | "other"
+   - fx   : le preset de particules (voir FX plus bas) et o ses réglages
+   ===================================================================== */
+const JUTSU = [
+  // ---------- Rang C ----------
+  { rank:"C", el:"fire", name:"Katon : Gōkakyū no Jutsu", jp:"火遁・豪火球の術", fr:"Boule de feu suprême", type:"Ninjutsu",
+    desc:"Le chakra est malaxé dans l'estomac puis soufflé en une énorme sphère de feu qui explose à l'impact.",
+    fx:"projectile", o:{ pal:"fire", from:"mouth", r:1.3, speed:11, charge:.7, impact:"explode", impactR:2.6 } },
+  { rank:"C", el:"fire", name:"Katon : Hōsenka no Jutsu", jp:"火遁・鳳仙火の術", fr:"Fleurs de feu du phénix", type:"Ninjutsu",
+    desc:"Une salve de petites boules de feu aux trajectoires indépendantes, souvent chargées de shuriken.",
+    fx:"projectile", o:{ pal:"fire", from:"mouth", r:.38, n:7, gap:.07, spread:2.4, curve:1.6, speed:15, charge:.45, impact:"explode", impactR:.9 } },
+  { rank:"C", el:"fire", name:"Katon : Ryūka no Jutsu", jp:"火遁・龍火の術", fr:"Feu du dragon", type:"Ninjutsu",
+    desc:"Un jet de flammes étroit et continu, guidé vers la cible comme le long d'un fil.",
+    fx:"stream", o:{ pal:"fire", from:"mouth", len:12, cone:.07, dur:1.5, rate:900, size:[.35,1.5], life:.85 } },
+  { rank:"C", el:"wind", name:"Fūton : Reppūshō", jp:"風遁・烈風掌", fr:"Paume de la bourrasque", type:"Ninjutsu",
+    desc:"Un claquement de paumes libère une rafale qui projette tout ce qui se trouve devant.",
+    fx:"gust", o:{ pal:"wind" } },
+  { rank:"C", el:"wind", name:"Fūton : Daitoppa", jp:"風遁・大突破", fr:"Grande percée", type:"Ninjutsu",
+    desc:"Un souffle de vent puissant et large qui balaie le terrain et soulève la poussière.",
+    fx:"stream", o:{ pal:"wind", from:"mouth", len:15, cone:.42, dur:1.8, rate:1300, size:[.22,.9], life:.6, dust:true } },
+  { rank:"C", el:"lightning", name:"Raiton : Jibashi", jp:"雷遁・地走り", fr:"Course de la foudre", type:"Ninjutsu",
+    desc:"La foudre court au ras du sol depuis la main du lanceur et électrocute la cible.",
+    fx:"crawl", o:{ pal:"lightning" } },
+  { rank:"C", el:"water", name:"Suiton : Teppōdama", jp:"水遁・鉄砲玉", fr:"Balle de fusil", type:"Ninjutsu",
+    desc:"Des boules d'eau compactes crachées à grande vitesse.",
+    fx:"projectile", o:{ pal:"water", from:"mouth", r:.55, n:3, gap:.32, speed:19, charge:.4, impact:"splash", impactR:1.4 } },
+  { rank:"C", el:"water", name:"Suiton : Suirō no Jutsu", jp:"水遁・水牢の術", fr:"Prison aqueuse", type:"Ninjutsu",
+    desc:"Une sphère d'eau épaisse se referme sur la cible et l'emprisonne.",
+    fx:"prison", o:{ pal:"water" } },
+  { rank:"C", el:"earth", name:"Doton : Doryū Taiga", jp:"土遁・土流大河", fr:"Fleuve de terre", type:"Ninjutsu",
+    desc:"Le sol se liquéfie en une coulée de boue qui emporte l'adversaire.",
+    fx:"wave", o:{ pal:"earth", kind:"mud" } },
+  { rank:"C", el:"other", name:"Kuchiyose no Jutsu", jp:"口寄せの術", fr:"Invocation", type:"Jikūkan Ninjutsu",
+    desc:"Un sceau de sang tracé au sol fait apparaître un animal sous contrat dans un nuage de fumée.",
+    fx:"summon", o:{} },
+
+  // ---------- Rang B ----------
+  { rank:"B", el:"fire", name:"Katon : Karyū Endan", jp:"火遁・火龍炎弾", fr:"Missile du dragon de feu", type:"Ninjutsu",
+    desc:"Les flammes prennent la forme d'un dragon qui ondule vers la cible.",
+    fx:"dragon", o:{ pal:"fire", path:"arc", head:.85, dur:1.4, body:.75, impact:"explode", impactR:2.4 } },
+  { rank:"B", el:"fire", name:"Katon : Haisekishō", jp:"火遁・灰積焼", fr:"Combustion des cendres", type:"Ninjutsu",
+    desc:"Un nuage de cendres brûlantes est soufflé, puis enflammé d'un claquement de dents.",
+    fx:"ash", o:{} },
+  { rank:"B", el:"wind", name:"Fūton : Kamaitachi no Jutsu", jp:"風遁・カマイタチの術", fr:"Belette faucheuse", type:"Ninjutsu",
+    desc:"Un coup d'éventail lance des lames de vent en croissant qui tranchent tout sur leur passage.",
+    fx:"blades", o:{ pal:"wind", n:7 } },
+  { rank:"B", el:"lightning", name:"Raiton : Gian", jp:"雷遁・偽暗", fr:"Fausse obscurité", type:"Ninjutsu",
+    desc:"Des lances d'éclairs jaillissent de la bouche du masque et transpercent la cible.",
+    fx:"lances", o:{ pal:"lightning", n:5 } },
+  { rank:"B", el:"water", name:"Suiton : Suijinheki", jp:"水遁・水陣壁", fr:"Mur aqueux", type:"Ninjutsu",
+    desc:"Une colonne d'eau tourbillonnante s'élève autour du lanceur et bloque les attaques.",
+    fx:"wall", o:{ pal:"water", kind:"spiral" } },
+  { rank:"B", el:"water", name:"Suiton : Suiryūdan no Jutsu", jp:"水遁・水龍弾の術", fr:"Missile du dragon aqueux", type:"Ninjutsu",
+    desc:"L'eau s'élève en spirale et prend la forme d'un dragon qui plonge sur l'adversaire.",
+    fx:"dragon", o:{ pal:"water", path:"rise", head:1.05, dur:2.3, body:1, impact:"splash", impactR:3 } },
+  { rank:"B", el:"water", name:"Suiton : Suikōdan no Jutsu", jp:"水遁・水鮫弾の術", fr:"Missile du requin aqueux", type:"Ninjutsu",
+    desc:"Des requins d'eau filent au ras du sol et s'écrasent sur la cible.",
+    fx:"dragon", o:{ pal:"water", path:"low", n:2, head:.7, dur:1.1, body:.5, impact:"splash", impactR:2 } },
+  { rank:"B", el:"earth", name:"Doton : Doryūheki", jp:"土遁・土流壁", fr:"Muraille de terre", type:"Ninjutsu",
+    desc:"Un mur de roche jaillit du sol devant le lanceur.",
+    fx:"wall", o:{ pal:"earth", kind:"front" } },
+  { rank:"B", el:"earth", name:"Doton : Doryūdan", jp:"土遁・土龍弾", fr:"Missile du dragon de terre", type:"Ninjutsu",
+    desc:"Une tête de dragon sort de terre et crache des boulets de boue.",
+    fx:"earthDragon", o:{} },
+  { rank:"B", el:"earth", name:"Doton : Yomi Numa", jp:"土遁・黄泉沼", fr:"Marais des enfers", type:"Ninjutsu",
+    desc:"Le sol sous la cible se change en marais qui l'aspire.",
+    fx:"swamp", o:{} },
+  { rank:"B", el:"earth", name:"Doton : Domu", jp:"土遁・土矛", fr:"Lance de terre", type:"Ninjutsu",
+    desc:"Le corps se durcit comme la pierre ; les coups ricochent dessus. Technique de Kakuzu.",
+    fx:"stone", o:{} },
+  { rank:"B", el:"other", name:"Kage Bunshin no Jutsu", jp:"影分身の術", fr:"Multiclonage", type:"Ninjutsu",
+    desc:"Des clones solides apparaissent dans un nuage de fumée.",
+    fx:"clones", o:{ n:2 } },
+
+  // ---------- Rang A ----------
+  { rank:"A", el:"fire", name:"Katon : Gōka Mekkyaku", jp:"火遁・豪火滅却", fr:"Destruction par le feu suprême", type:"Ninjutsu",
+    desc:"Un mur de flammes gigantesque qui couvre tout le champ de bataille.",
+    fx:"stream", o:{ pal:"fire", from:"mouth", len:16, cone:.5, dur:3, rate:1300, size:[.5,3], life:1.05, charge:.5, heavy:true } },
+  { rank:"A", el:"fire", name:"Katon : Gōryūka no Jutsu", jp:"火遁・豪龍火の術", fr:"Dragons de feu suprêmes", type:"Ninjutsu",
+    desc:"Plusieurs dragons de feu tombent du ciel sur la cible.",
+    fx:"dragon", o:{ pal:"fire", path:"sky", n:3, head:.9, dur:1.5, body:.7, impact:"explode", impactR:2.6, delay:.3 } },
+  { rank:"A", el:"fire", name:"Katon : Zukokku", jp:"火遁・頭刻苦", fr:"Tempête de feu du masque", type:"Ninjutsu",
+    desc:"Le masque de feu de Kakuzu crache une boule de flammes qui éclate en tempête ardente.",
+    fx:"projectile", o:{ pal:"fire", from:"mouth", r:1.1, speed:9, charge:.8, impact:"explode", impactR:3.6, storm:true } },
+  { rank:"A", el:"wind", name:"Fūton : Atsugai", jp:"風遁・圧害", fr:"Dommage de pression", type:"Ninjutsu",
+    desc:"Une sphère d'air comprimé dévastatrice, lancée par le masque de vent de Kakuzu.",
+    fx:"projectile", o:{ pal:"wind", from:"mouth", r:1.5, speed:10, charge:.9, impact:"shock", impactR:3.4 } },
+  { rank:"A", el:"lightning", name:"Chidori", jp:"千鳥", fr:"Mille oiseaux", type:"Ninjutsu",
+    desc:"La foudre concentrée dans la main crépite comme mille oiseaux ; le lanceur charge et transperce.",
+    fx:"orb", o:{ pal:"lightning", kind:"chidori", r:.35 } },
+  { rank:"A", el:"lightning", name:"Raikiri", jp:"雷切", fr:"Lame de foudre", type:"Ninjutsu",
+    desc:"La version maîtrisée du Chidori, assez tranchante pour fendre un éclair.",
+    fx:"orb", o:{ pal:"lightning", kind:"chidori", r:.5, hot:true } },
+  { rank:"A", el:"lightning", name:"Raiton : Kage Bunshin", jp:"雷遁影分身の術", fr:"Clone de foudre", type:"Ninjutsu",
+    desc:"Un clone chargé de foudre qui se décharge en touchant l'adversaire.",
+    fx:"raitonClone", o:{} },
+  { rank:"A", el:"water", name:"Suiton : Daibakufu no Jutsu", jp:"水遁・大瀑布の術", fr:"Grande cascade", type:"Ninjutsu",
+    desc:"Une vague colossale déferle et submerge tout le terrain.",
+    fx:"wave", o:{ pal:"water", kind:"water" } },
+  { rank:"A", el:"water", name:"Suiton : Bakusui Shōha", jp:"水遁・爆水衝波", fr:"Raz-de-marée explosif", type:"Ninjutsu",
+    desc:"Une masse d'eau énorme sort de la bouche et inonde la zone.",
+    fx:"stream", o:{ pal:"water", from:"mouth", len:14, cone:.45, dur:2.4, rate:1400, size:[.4,2], life:1, grav:3, heavy:true } },
+  { rank:"A", el:"other", name:"Rasengan", jp:"螺旋丸", fr:"Orbe tourbillonnant", type:"Ninjutsu",
+    desc:"Une sphère de chakra en rotation, plaquée sur la cible au contact.",
+    fx:"orb", o:{ pal:"chakra", kind:"rasengan", r:.32 } },
+  { rank:"A", el:"other", name:"Ōdama Rasengan", jp:"大玉螺旋丸", fr:"Grand orbe tourbillonnant", type:"Ninjutsu",
+    desc:"Un Rasengan beaucoup plus gros et plus destructeur.",
+    fx:"orb", o:{ pal:"chakra", kind:"rasengan", r:.75 } },
+  { rank:"A", el:"other", name:"Tajū Kage Bunshin no Jutsu", jp:"多重影分身の術", fr:"Multiclonage supra", type:"Ninjutsu",
+    desc:"Des dizaines de clones apparaissent en même temps.",
+    fx:"clones", o:{ n:26 } },
+
+  // ---------- Rang S ----------
+  { rank:"S", el:"wind", name:"Fūton : Rasenshuriken", jp:"風遁・螺旋手裏剣", fr:"Orbe shuriken", type:"Ninjutsu",
+    desc:"Un Rasengan chargé de vent en forme de shuriken, qui explose en un dôme de lames microscopiques.",
+    fx:"rasenshuriken", o:{ pal:"wind" } },
+  { rank:"S", el:"lightning", name:"Kirin", jp:"麒麟", fr:"Kirin", type:"Ninjutsu",
+    desc:"La foudre naturelle d'un orage est guidée sur la cible sous la forme d'une bête céleste.",
+    fx:"kirin", o:{ pal:"lightning" } },
+  { rank:"S", el:"other", name:"Hiraishin no Jutsu", jp:"飛雷神の術", fr:"Dieu de la foudre volante", type:"Jikūkan Ninjutsu",
+    desc:"Le lanceur se téléporte instantanément vers son kunai marqué.",
+    fx:"hiraishin", o:{} },
+  { rank:"S", el:"other", name:"Shiki Fūjin", jp:"屍鬼封尽", fr:"Scellement du démon mort", type:"Fūinjutsu",
+    desc:"Le dieu de la mort apparaît derrière le lanceur et arrache l'âme de la cible.",
+    fx:"reaper", o:{} },
+  { rank:"S", el:"other", name:"Jiongu", jp:"地怨虞", fr:"Rancune terrestre", type:"Kinjutsu",
+    desc:"Les fils noirs de Kakuzu jaillissent de son corps et ligotent la cible. Ses quatre cœurs volés brillent dans son dos.",
+    fx:"threads", o:{} },
+];
+
+const RANKS = ["C","B","A","S"];
+const ELEMENTS = {
+  fire:      { label:"Feu",    kanji:"火" },
+  wind:      { label:"Vent",   kanji:"風" },
+  lightning: { label:"Foudre", kanji:"雷" },
+  water:     { label:"Eau",    kanji:"水" },
+  earth:     { label:"Terre",  kanji:"土" },
+  other:     { label:"Autre",  kanji:"他" },
+};
+const FX_LABEL = {
+  projectile:"projectile", stream:"souffle", gust:"rafale", crawl:"éclair rampant", prison:"prison",
+  wave:"vague", summon:"invocation", dragon:"dragon", ash:"cendres + ignition", blades:"lames",
+  lances:"lances d'éclairs", wall:"mur", earthDragon:"dragon + boulets", swamp:"marais", stone:"armure",
+  clones:"clones", orb:"orbe en main", raitonClone:"clone + décharge", rasenshuriken:"orbe + dôme",
+  kirin:"orage + éclair", hiraishin:"téléportation", reaper:"spectre", threads:"fils",
+};
+
+/* =====================================================================
+   2. SCÈNE
+   ===================================================================== */
+const V = (x=0,y=0,z=0) => new THREE.Vector3(x,y,z);
+const rand = (a,b) => a + Math.random()*(b-a);
+const TAU = Math.PI*2;
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const easeOut = k => 1 - Math.pow(1-k, 3);
+const easeInOut = k => k<.5 ? 4*k*k*k : 1 - Math.pow(-2*k+2, 3)/2;
+const _d = V(), _d2 = V(), _t = V();
+function rdir(out){ const u = Math.random()*2-1, a = Math.random()*TAU, s = Math.sqrt(1-u*u); return out.set(s*Math.cos(a), u, s*Math.sin(a)); }
+const COL = (hex, a) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b, a]; };
+const grad = (a,b,c) => Float32Array.from([...a,...b,...c]);
+
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:"high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+stage.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#121522");
+scene.fog = new THREE.Fog("#121522", 24, 55);
+const camera = new THREE.PerspectiveCamera(48, 1, .1, 200);
+camera.position.set(-14.5, 6.2, 6.5);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, .2, 5.2);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI*.495;
+controls.minDistance = 4; controls.maxDistance = 40;
+
+scene.add(new THREE.HemisphereLight("#8ea0c8", "#201c1a", .45));
+const moon = new THREE.DirectionalLight("#cfd8ff", .55); moon.position.set(-6, 12, -4); scene.add(moon);
+const fxLight = new THREE.PointLight("#ffffff", 0, 18, 2); scene.add(fxLight);
+
+// Terrain d'entraînement
+{
+  const g = new THREE.CircleGeometry(30, 64); g.rotateX(-Math.PI/2);
+  const m = new THREE.MeshStandardMaterial({ color:"#0d1019", roughness:.95 });
+  scene.add(new THREE.Mesh(g, m));
+  const grid = new THREE.GridHelper(40, 40, "#343b55", "#232839"); grid.position.y = .005;
+  grid.material.transparent = true; grid.material.opacity = .45; scene.add(grid);
+  // marques de lancer
+  const ringM = new THREE.MeshBasicMaterial({ color:"#4a5270", transparent:true, opacity:.6 });
+  [0, 11].forEach(z => { const r = new THREE.Mesh(new THREE.RingGeometry(.9, .95, 48), ringM); r.rotation.x = -Math.PI/2; r.position.set(0,.01,z); scene.add(r); });
+}
+
+// Mannequin (le lanceur et ses clones)
+const bodyGeo = { torso:new THREE.CylinderGeometry(.24,.2,.7,12), hips:new THREE.CylinderGeometry(.2,.22,.25,12), head:new THREE.SphereGeometry(.17,16,12),
+  limb:new THREE.CylinderGeometry(.065,.055,.62,8), leg:new THREE.CylinderGeometry(.085,.07,.85,8), plate:new THREE.BoxGeometry(.2,.06,.03) };
+const casterMat = new THREE.MeshStandardMaterial({ color:"#3d4a66", roughness:.6 });
+const cloneMat = casterMat.clone();
+const plateMat = new THREE.MeshStandardMaterial({ color:"#b9c0cc", metalness:.8, roughness:.3 });
+const CASTER_COLOR = new THREE.Color("#3d4a66");
+function makeNinja(mat){
+  const g = new THREE.Group();
+  const add = (geo, x,y,z, parent=g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); parent.add(m); return m; };
+  add(bodyGeo.torso, 0, 1.25, 0); add(bodyGeo.hips, 0, .92, 0); add(bodyGeo.head, 0, 1.75, 0);
+  const plate = new THREE.Mesh(bodyGeo.plate, plateMat); plate.position.set(0, 1.79, .155); g.add(plate);
+  add(bodyGeo.leg, -.11, .43, 0); add(bodyGeo.leg, .11, .43, 0);
+  const armL = new THREE.Group(); armL.position.set(-.3, 1.52, 0); g.add(armL); add(bodyGeo.limb, 0, -.31, 0, armL); armL.rotation.z = -.12;
+  const armR = new THREE.Group(); armR.position.set(.3, 1.52, 0); g.add(armR); add(bodyGeo.limb, 0, -.31, 0, armR); armR.rotation.z = .12;
+  const tip = new THREE.Object3D(); tip.position.set(0, -.68, 0); armR.add(tip);
+  g.userData = { armR, armL, tip, pose:0 };
+  return g;
+}
+const caster = makeNinja(casterMat); scene.add(caster);
+const clones = [];
+for (let i=0;i<30;i++){ const c = makeNinja(cloneMat); c.visible = false; scene.add(c); clones.push(c); }
+
+// Mannequin d'entraînement (la cible)
+const dummy = new THREE.Group();
+{
+  const wood = new THREE.MeshStandardMaterial({ color:"#8a6a45", roughness:.85 });
+  const rope = new THREE.MeshStandardMaterial({ color:"#c9b48a", roughness:1 });
+  const inner = new THREE.Group(); dummy.add(inner); dummy.userData.inner = inner;
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,2.1,12), wood); post.position.y = 1.05; inner.add(post);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,1.1,8), wood); arm.rotation.z = Math.PI/2; arm.position.y = 1.45; inner.add(arm);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.22,14,10), wood); head.position.y = 2.28; inner.add(head);
+  [0.8, 1.2].forEach(y => { const r = new THREE.Mesh(new THREE.TorusGeometry(.2,.03,6,16), rope); r.rotation.x = Math.PI/2; r.position.y = y; inner.add(r); });
+  dummy.position.set(0, 0, 11); dummy.rotation.y = Math.PI;
+  dummy.userData.ang = 0; dummy.userData.vel = 0; dummy.userData.sink = 0;
+  scene.add(dummy);
+}
+const AIM = V(0, 1.25, 11);
+const TARGET = V(0, 0, 11);
+
+/* =====================================================================
+   3. MOTEUR DE PARTICULES
+   Deux pools : additif (feu, foudre, chakra) et normal (fumée, boue, fils).
+   ===================================================================== */
+const VERT = `
+attribute vec4 aColor; attribute float aSize; varying vec4 vColor; uniform float uScale;
+void main(){ vColor = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_PointSize = aSize * uScale / max(.1, -mv.z); gl_Position = projectionMatrix * mv; }`;
+const FRAG = `
+varying vec4 vColor; uniform float uSoft;
+void main(){ vec2 c = gl_PointCoord - .5; float d = length(c) * 2.0; if (d > 1.0) discard;
+  float a = pow(1.0 - d, uSoft) * vColor.a; gl_FragColor = vec4(vColor.rgb, a); }`;
+
+class Pool {
+  constructor(max, blending, soft){
+    this.max = max; this.n = 0;
+    const F = k => new Float32Array(max*k);
+    this.p = F(3); this.v = F(3); this.life = F(1); this.age = F(1); this.s0 = F(1); this.s1 = F(1);
+    this.drag = F(1); this.grav = F(1); this.turb = F(1); this.gr = new Array(max);
+    this.geo = new THREE.BufferGeometry();
+    this.aPos = new THREE.BufferAttribute(F(3), 3).setUsage(THREE.DynamicDrawUsage);
+    this.aCol = new THREE.BufferAttribute(F(4), 4).setUsage(THREE.DynamicDrawUsage);
+    this.aSize = new THREE.BufferAttribute(F(1), 1).setUsage(THREE.DynamicDrawUsage);
+    this.geo.setAttribute("position", this.aPos); this.geo.setAttribute("aColor", this.aCol); this.geo.setAttribute("aSize", this.aSize);
+    this.geo.setDrawRange(0, 0);
+    this.mat = new THREE.ShaderMaterial({ uniforms:{ uScale:{value:500}, uSoft:{value:soft} }, vertexShader:VERT, fragmentShader:FRAG,
+      transparent:true, depthWrite:false, blending });
+    this.points = new THREE.Points(this.geo, this.mat); this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+  spawn(x,y,z, vx,vy,vz, life, s0, s1, g, drag=0, grav=0, turb=0){
+    if (this.n >= this.max) return;
+    const i = this.n++, i3 = i*3;
+    this.p[i3]=x; this.p[i3+1]=y; this.p[i3+2]=z; this.v[i3]=vx; this.v[i3+1]=vy; this.v[i3+2]=vz;
+    this.life[i]=life; this.age[i]=0; this.s0[i]=s0; this.s1[i]=s1; this.gr[i]=g; this.drag[i]=drag; this.grav[i]=grav; this.turb[i]=turb;
+  }
+  kill(i){
+    const j = --this.n; if (i === j) return;
+    const i3=i*3, j3=j*3;
+    for (let k=0;k<3;k++){ this.p[i3+k]=this.p[j3+k]; this.v[i3+k]=this.v[j3+k]; }
+    this.life[i]=this.life[j]; this.age[i]=this.age[j]; this.s0[i]=this.s0[j]; this.s1[i]=this.s1[j];
+    this.gr[i]=this.gr[j]; this.drag[i]=this.drag[j]; this.grav[i]=this.grav[j]; this.turb[i]=this.turb[j];
+  }
+  update(dt, t){
+    const P=this.p, Vv=this.v, pos=this.aPos.array, col=this.aCol.array, siz=this.aSize.array;
+    for (let i=0;i<this.n;i++){
+      const age = (this.age[i] += dt), life = this.life[i];
+      if (age >= life){ this.kill(i); i--; continue; }
+      const i3=i*3, dr = Math.max(0, 1 - this.drag[i]*dt), tu = this.turb[i];
+      let vx=Vv[i3]*dr, vy=Vv[i3+1]*dr - this.grav[i]*dt, vz=Vv[i3+2]*dr;
+      if (tu){ const px=P[i3], py=P[i3+1], pz=P[i3+2];
+        vx += Math.sin(py*1.7 + t*2.3 + i)*tu*dt; vy += Math.sin(pz*1.3 + t*1.9 + i*.7)*tu*dt; vz += Math.sin(px*1.5 + t*2.1 + i*1.3)*tu*dt; }
+      Vv[i3]=vx; Vv[i3+1]=vy; Vv[i3+2]=vz;
+      P[i3]+=vx*dt; P[i3+1]+=vy*dt; P[i3+2]+=vz*dt;
+      if (P[i3+1] < .02 && vy < 0 && this.grav[i] > 0){ P[i3+1] = .02; Vv[i3+1] *= -.25; Vv[i3]*=.6; Vv[i3+2]*=.6; }
+      const k = age/life, G = this.gr[i]; let o, f;
+      if (k < .45){ o = 0; f = k/.45; } else { o = 4; f = (k-.45)/.55; }
+      const i4 = i*4, fade = Math.min(1, age/.04);
+      col[i4]   = G[o]   + (G[o+4]-G[o])*f;
+      col[i4+1] = G[o+1] + (G[o+5]-G[o+1])*f;
+      col[i4+2] = G[o+2] + (G[o+6]-G[o+2])*f;
+      col[i4+3] = (G[o+3] + (G[o+7]-G[o+3])*f) * fade;
+      pos[i3]=P[i3]; pos[i3+1]=P[i3+1]; pos[i3+2]=P[i3+2];
+      siz[i] = this.s0[i] + (this.s1[i]-this.s0[i])*k;
+    }
+    this.geo.setDrawRange(0, this.n);
+    this.aPos.needsUpdate = this.aCol.needsUpdate = this.aSize.needsUpdate = true;
+  }
+  clear(){ this.n = 0; this.geo.setDrawRange(0,0); }
+}
+const MOBILE = matchMedia("(max-width: 820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const Q = MOBILE ? .55 : 1;
+const ADD = new Pool(MOBILE ? 16000 : 30000, THREE.AdditiveBlending, 1.6);
+const NORM = new Pool(MOBILE ? 7000 : 12000, THREE.NormalBlending, 1.1);
+NORM.points.renderOrder = 1; ADD.points.renderOrder = 2;
+
+// Palettes de particules : core = cœur lumineux, outer = halo, smoke = fumée (pool normal)
+const PAL = {
+  fire: { core:grad(COL("#fff0c0",.55),COL("#ff9a30",.42),COL("#ff3a0a",0)), outer:grad(COL("#ffb050",.28),COL("#ff5a12",.22),COL("#801606",0)),
+          smoke:grad(COL("#2b211d",0),COL("#3d302a",.5),COL("#55463d",0)), spark:grad(COL("#fffbe8",1),COL("#ffd060",1),COL("#ff6a00",0)), light:"#ff7a2a" },
+  wind: { core:grad(COL("#f4fffc",.65),COL("#c8f5ea",.4),COL("#8fdccd",0)), outer:grad(COL("#c9fff2",.32),COL("#8fd6c8",.2),COL("#3f8f84",0)),
+          smoke:grad(COL("#b9ab8f",0),COL("#a8997c",.32),COL("#968a70",0)), spark:grad(COL("#ffffff",1),COL("#e6fff9",.8),COL("#a8efe2",0)), light:"#c4fff1" },
+  lightning: { core:grad(COL("#ffffff",1),COL("#e2f0ff",1),COL("#8fb6ff",0)), outer:grad(COL("#bcd6ff",.45),COL("#5b84ff",.32),COL("#3322ff",0)),
+          smoke:null, spark:grad(COL("#ffffff",1),COL("#cfe2ff",1),COL("#6a8cff",0)), light:"#9cc0ff" },
+  water: { core:grad(COL("#e8f8ff",.6),COL("#8fd2ff",.42),COL("#2a86d0",0)), outer:grad(COL("#5cb4f0",.3),COL("#1f6fb8",.22),COL("#0d3f78",0)),
+          smoke:grad(COL("#ffffff",0),COL("#e6f4ff",.5),COL("#cfe8f7",0)), spark:grad(COL("#ffffff",1),COL("#c9ecff",.8),COL("#5ab0ea",0)), light:"#6cc4ff" },
+  earth: { core:grad(COL("#cfb07a",1),COL("#8f6a3e",1),COL("#5a3f26",0)), outer:grad(COL("#7d6a52",1),COL("#5a4a3c",1),COL("#3a3029",0)),
+          smoke:grad(COL("#a8957a",0),COL("#9a8668",.5),COL("#8a7a62",0)), spark:grad(COL("#e8d2a2",1),COL("#a77e4a",1),COL("#5e4128",0)), light:"#e0b070", norm:true },
+  chakra: { core:grad(COL("#f0fbff",.8),COL("#9fe4ff",.6),COL("#2f9cff",0)), outer:grad(COL("#6fc8ff",.35),COL("#2f7cff",.25),COL("#1a3cff",0)),
+          smoke:null, spark:grad(COL("#ffffff",1),COL("#c5f1ff",1),COL("#4fb8ff",0)), light:"#6fc8ff" },
+  yin: { core:grad(COL("#f6ecff",.9),COL("#b07bff",.6),COL("#4a1a8a",0)), outer:grad(COL("#9a6bff",.38),COL("#5a2bb0",.28),COL("#200a40",0)),
+          smoke:grad(COL("#120a1c",0),COL("#1c1028",.6),COL("#2a1a3a",0)), spark:grad(COL("#ffffff",1),COL("#d9c2ff",1),COL("#7a3cff",0)), light:"#a26bff" },
+  smoke: { smoke:grad(COL("#f4f1ea",0),COL("#e2ded6",.85),COL("#c4c0b8",0)), light:"#ffffff" },
+  ash:   { core:grad(COL("#4a4542",.0),COL("#5c5652",.7),COL("#6e6762",0)), smoke:grad(COL("#2a2624",0),COL("#3a3532",.45),COL("#4a4440",0)), light:"#ff7a2a", norm:true },
+  thread:{ core:grad(COL("#060608",1),COL("#121116",.95),COL("#24222a",0)), glint:grad(COL("#ff6a5a",.7),COL("#c42a2a",.45),COL("#400000",0)), light:"#ff5040", norm:true },
+  flash: { core:grad(COL("#fffdf0",1),COL("#ffe45c",.85),COL("#ffae00",0)), outer:grad(COL("#fff2a8",.5),COL("#ffcc33",.3),COL("#ff9900",0)),
+          spark:grad(COL("#ffffff",1),COL("#fff2a0",1),COL("#ffb000",0)), light:"#ffd84a" },
+  cloud: { smoke:grad(COL("#1a1d2b",0),COL("#232738",.75),COL("#2c3042",0)) },
+  ink:   { core:grad(COL("#0c0b0d",.95),COL("#141216",.9),COL("#1a1820",0)) },
+};
+const corePool = pal => pal.norm ? NORM : ADD;
+
+function emit(rate, dt){ const x = rate*dt*Q; let n = Math.floor(x); if (Math.random() < x-n) n++; return n; }
+// Gerbe de particules autour de pos
+function puff(pool, pos, count, o){
+  const n = Math.round(count*Q);
+  const sp0 = o.sp0 ?? 0, sp1 = o.sp1 ?? o.sp ?? 1, r = o.r || 0, sz = o.size || [.3,.1], life = o.life || [.4,.8];
+  for (let i=0;i<n;i++){
+    rdir(_d); const rr = r*Math.cbrt(Math.random());
+    const px = pos.x+_d.x*rr, py = pos.y+_d.y*rr, pz = pos.z+_d.z*rr;
+    const sp = rand(sp0, sp1);
+    if (o.dir){ rdir(_d2); const s = o.spread || 0;
+      _d2.set(o.dir.x + _d2.x*s, o.dir.y + _d2.y*s, o.dir.z + _d2.z*s).normalize(); }
+    else if (o.radial) _d2.copy(_d);
+    else rdir(_d2);
+    if (o.flat) { _d2.y *= o.flat; }
+    let vx = _d2.x*sp, vy = _d2.y*sp, vz = _d2.z*sp;
+    if (o.vel){ vx += o.vel.x; vy += o.vel.y; vz += o.vel.z; }
+    const k = rand(.7, 1.2);
+    pool.spawn(px,py,pz, vx,vy,vz, rand(life[0],life[1]), sz[0]*k, sz[1]*k, o.g, o.drag||0, o.grav||0, o.turb||0);
+  }
+}
+// Anneau de particules (plan perpendiculaire à axis)
+function ring(pool, pos, count, o){
+  const n = Math.round(count*Q), axis = o.axis || V(0,1,0);
+  const a = Math.abs(axis.y) < .9 ? V(0,1,0) : V(1,0,0);
+  const u = V().crossVectors(axis, a).normalize(), w = V().crossVectors(axis, u).normalize();
+  for (let i=0;i<n;i++){
+    const t = Math.random()*TAU, c = Math.cos(t), s = Math.sin(t), rad = o.rad || 0;
+    const dx = u.x*c + w.x*s, dy = u.y*c + w.y*s, dz = u.z*c + w.z*s, sp = rand(o.sp0 ?? o.sp*.7, o.sp);
+    pool.spawn(pos.x+dx*rad, pos.y+dy*rad, pos.z+dz*rad, dx*sp, dy*sp + (o.up||0), dz*sp,
+      rand(o.life[0], o.life[1]), o.size[0], o.size[1], o.g, o.drag||0, o.grav||0, o.turb||0);
+  }
+}
+// Éclair : déplacement du point médian, rendu en particules lumineuses
+function boltPath(a, b, jag, depth){
+  let pts = [a.clone(), b.clone()], disp = a.distanceTo(b)*jag;
+  for (let d=0; d<depth; d++){
+    const np = [];
+    for (let i=0;i<pts.length-1;i++){ np.push(pts[i]); const m = pts[i].clone().lerp(pts[i+1], .5); rdir(_d); m.addScaledVector(_d, disp*rand(.2,1)); np.push(m); }
+    np.push(pts[pts.length-1]); pts = np; disp *= .52;
+  }
+  return pts;
+}
+function drawPolyline(pts, o){
+  const pal = PAL[o.pal || "lightning"], w = o.w || .1, glow = o.glow || w*4, life = o.life || .09;
+  for (let i=0;i<pts.length-1;i++){
+    const a = pts[i], b = pts[i+1], len = a.distanceTo(b), steps = Math.max(1, Math.ceil(len/(w*.7)));
+    for (let s=0;s<steps;s++){
+      _t.copy(a).lerp(b, s/steps);
+      ADD.spawn(_t.x,_t.y,_t.z, 0,0,0, life, w, w*.6, pal.core);
+      if (s % 3 === 0) ADD.spawn(_t.x,_t.y,_t.z, 0,0,0, life*1.4, glow, glow*.7, pal.outer);
+    }
+  }
+}
+function bolt(a, b, o={}){
+  const pts = boltPath(a, b, o.jag ?? .18, o.depth ?? 5);
+  drawPolyline(pts, o);
+  const br = o.branches ?? 1;
+  for (let i=0;i<br;i++){
+    const p = pts[Math.floor(rand(.15,.85)*pts.length)], len = a.distanceTo(b)*rand(.15,.35);
+    rdir(_d); const e = p.clone().addScaledVector(_d, len);
+    drawPolyline(boltPath(p, e, .25, 3), { ...o, w:(o.w||.1)*.55, glow:(o.glow||.4)*.5 });
+  }
+}
+function boltCurve(curve, o={}){ for (let i=0;i<curve.length-1;i++) bolt(curve[i], curve[i+1], { ...o, branches: Math.random() < (o.branchChance ?? .3) ? 1 : 0 }); }
+
+/* =====================================================================
+   4. SÉQUENCEUR : tâches temporisées, lumière, secousses, impacts
+   ===================================================================== */
+const S = {
+  time:0, tasks:[], meshes:[], speed:1, flashI:0, glowT:0, glowI:0, shakeA:0,
+  task(delay, dur, fn){ this.tasks.push({ t0:this.time+delay, dur, fn, acc:{} }); },
+  at(delay, fn){ this.task(delay, 0, () => fn()); },
+  update(dt){
+    this.time += dt;
+    for (let i=0;i<this.tasks.length;i++){
+      const T = this.tasks[i]; if (this.time < T.t0) continue;
+      const lt = this.time - T.t0, done = lt >= T.dur, k = T.dur > 0 ? Math.min(1, lt/T.dur) : 1;
+      try { T.fn(dt, k, Math.min(lt, T.dur), T.acc); } catch (e) { console.error(e); this.tasks.splice(i,1); i--; continue; }
+      if (done){ this.tasks.splice(i,1); i--; }
+    }
+  },
+  flash(hex, power, pos){ fxLight.color.set(hex); if (pos) fxLight.position.copy(pos); this.flashI = Math.max(this.flashI, power); },
+  glow(hex, level, pos){ if (level > this.glowT){ this.glowT = level; fxLight.color.set(hex); if (pos) fxLight.position.copy(pos); } },
+  shake(a){ this.shakeA = Math.max(this.shakeA, a); },
+  hit(s){ dummy.userData.vel += s*2.2; },
+  addMesh(m){ scene.add(m); this.meshes.push(m); return m; },
+  removeMesh(m){ scene.remove(m); m.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); this.meshes = this.meshes.filter(x => x !== m); },
+  pose(p){ caster.userData.pose = { down:0, forward:-Math.PI/2, up:-Math.PI*.95 }[p] ?? 0; },
+  hand(c=caster){ c.updateMatrixWorld(true); return c.userData.tip.getWorldPosition(V()); },
+  mouth(c=caster){ c.updateMatrixWorld(true); return c.localToWorld(V(0, 1.6, .32)); },
+  chest(c=caster){ c.updateMatrixWorld(true); return c.localToWorld(V(0, 1.25, .2)); },
+  origin(f){ return f === "hand" ? this.hand() : f && f.isVector3 ? f.clone() : this.mouth(); },
+  reset(){
+    this.tasks = []; this.time = 0;
+    [...this.meshes].forEach(m => this.removeMesh(m));
+    ADD.clear(); NORM.clear();
+    caster.position.set(0,0,0); caster.rotation.set(0,0,0); caster.visible = true; caster.userData.pose = 0;
+    caster.userData.armR.rotation.x = 0;
+    casterMat.color.copy(CASTER_COLOR); casterMat.roughness = .6; casterMat.metalness = 0;
+    clones.forEach(c => { c.visible = false; c.rotation.set(0,0,0); c.userData.armR.rotation.x = 0; });
+    dummy.userData.ang = 0; dummy.userData.vel = 0; dummy.userData.sink = 0; dummy.visible = true;
+    this.flashI = 0; this.glowT = 0; this.glowI = 0;
+  },
+};
+
+// Base vectorielle orientée vers dir
+function basis(dir){ const f = dir.clone().normalize(), up0 = Math.abs(f.y) > .95 ? V(1,0,0) : V(0,1,0);
+  const side = V().crossVectors(up0, f).normalize(), up = V().crossVectors(f, side).normalize(); return { f, side, up }; }
+
+/* =====================================================================
+   5. PRESETS D'EFFETS
+   ===================================================================== */
+const FX = {};
+
+// --- Impact générique
+FX.impact = (p, o) => {
+  const pal = PAL[o.pal], s = o.impactR || 2, kind = o.impact || "explode";
+  if (kind === "explode"){
+    puff(ADD, p, 140*s, { r:.3*s, sp0:1, sp1:6*s, drag:3.5, life:[.35,.9], size:[.9*s*.6,.2*s], g:pal.core });
+    puff(ADD, p, 90*s, { r:.4*s, sp0:.5, sp1:4*s, drag:3, life:[.6,1.2], size:[.9*s*.6,1.4*s*.6], g:pal.outer });
+    puff(ADD, p, 40*s, { sp0:4, sp1:12, life:[.5,1.1], size:[.12,.05], g:pal.spark, grav:7, drag:.5 });
+    if (pal.smoke) puff(NORM, p, 30*s, { r:.6*s, sp:1.4*s, vel:V(0,1.6,0), drag:1.2, life:[1.4,2.6], size:[.6*s,2.2*s], g:pal.smoke, turb:1 });
+    ring(ADD, V(p.x,.15,p.z), 70*s, { rad:.3, sp:5*s, drag:3, life:[.4,.8], size:[.5*s*.5,.1], g:pal.outer });
+    S.flash(pal.light, 5*s, p); S.shake(.18*s); if (!o.noHit) S.hit(1.1*s);
+    if (o.storm) S.task(.15, 1.8, (dt,k) => {
+      const c = emit(700*(1-k*.6), dt);
+      for (let i=0;i<c;i++){ const a = rand(0,TAU), rr = Math.sqrt(Math.random())*s*1.3;
+        ADD.spawn(p.x+Math.cos(a)*rr, rand(0,.6), p.z+Math.sin(a)*rr, rand(-.5,.5), rand(3,7), rand(-.5,.5), rand(.5,1), rand(.7,1.4), .2, pal.core, .6, 0, 2);
+        if (i%6===0) NORM.spawn(p.x+Math.cos(a)*rr, rand(1,3), p.z+Math.sin(a)*rr, 0, rand(1,2.5), 0, rand(1.2,2.2), 1, 3, pal.smoke, .2, 0, 1); }
+      S.glow(pal.light, 4*(1-k), p); if (Math.random() < dt*4) S.hit(.3);
+    });
+  } else if (kind === "splash"){
+    puff(ADD, p, 160*s, { r:.3*s, sp0:2, sp1:5*s, vel:V(0,3.2,0), grav:11, life:[.6,1.3], size:[.28,.12], g:pal.core });
+    puff(NORM, p, 40*s, { r:.5*s, sp:2*s, drag:2, life:[.8,1.6], size:[.5*s,1.6*s], g:pal.smoke, turb:.6 });
+    ring(ADD, V(p.x,.12,p.z), 90*s, { rad:.4*s, sp:4*s, up:2.5, grav:8, drag:1.5, life:[.5,.9], size:[.35,.1], g:pal.outer });
+    S.flash(pal.light, 3*s, p); S.shake(.12*s); S.hit(1*s);
+  } else if (kind === "shock"){
+    ring(ADD, p, 220*s, { rad:.2, sp:7*s, drag:3.2, life:[.4,.75], size:[.35,.08], g:pal.core, axis:V(0,1,0) });
+    ring(ADD, p, 160*s, { rad:.2, sp:6*s, drag:3.2, life:[.4,.75], size:[.35,.08], g:pal.core, axis:V(0,0,1) });
+    puff(ADD, p, 120*s, { r:.4*s, sp0:2, sp1:7*s, drag:3, life:[.3,.6], size:[.6,.1], g:pal.outer });
+    ring(NORM, V(p.x,.1,p.z), 60*s, { rad:.5*s, sp:4*s, up:.6, drag:1.5, life:[1,1.8], size:[.6,2], g:pal.smoke || PAL.wind.smoke });
+    S.flash(pal.light, 4*s, p); S.shake(.22*s); S.hit(1.4*s);
+  } else if (kind === "spark"){
+    S.task(0, .45, () => { for (let i=0;i<3;i++){ rdir(_d); bolt(p, p.clone().addScaledVector(_d, rand(.8,1.8)*s*.6), { w:.07, depth:3, branches:0, life:.06 }); } });
+    puff(ADD, p, 90*s, { sp0:3, sp1:9, life:[.3,.8], size:[.12,.04], g:pal.spark, grav:8 });
+    S.flash(pal.light, 6*s, p); S.shake(.15*s); S.hit(1.2*s);
+  } else if (kind === "mud"){
+    puff(NORM, p, 70*s, { r:.3*s, sp0:2, sp1:6*s, vel:V(0,2,0), grav:14, life:[.7,1.3], size:[.25,.2], g:PAL.earth.core });
+    puff(NORM, p, 30*s, { r:.4*s, sp:2, drag:2, life:[1,1.8], size:[.6,1.8], g:PAL.earth.smoke });
+    S.shake(.12*s); S.hit(.9*s);
+  }
+};
+
+// --- Projectile : charge, vol, impact
+FX.projectile = o => {
+  const pal = PAL[o.pal], pool = corePool(pal), n = o.n || 1, r = o.r || .6, speed = o.speed || 14, charge = o.charge ?? .5;
+  if (!o.origin) S.pose(o.from === "hand" ? "forward" : "down");
+  S.task(0, charge, (dt,k) => {
+    const m = o.origin ? o.origin.clone() : S.origin(o.from), c = emit(220*Math.max(.4,r), dt);
+    for (let i=0;i<c;i++){ rdir(_d); const R = r*2.2; pool.spawn(m.x+_d.x*R, m.y+_d.y*R, m.z+_d.z*R, -_d.x*R/.25, -_d.y*R/.25, -_d.z*R/.25, .25, r*.45, r*.1, pal.core); }
+    S.glow(pal.light, 2*k, m);
+  });
+  for (let j=0;j<n;j++){
+    S.at(charge + j*(o.gap || .18), () => {
+      const start = o.origin ? o.origin.clone() : S.origin(o.from);
+      const end = o.to ? o.to.clone() : AIM.clone(); if (o.spread){ end.x += rand(-1,1)*o.spread; end.y += rand(-.6,.9)*o.spread*.5; }
+      const B = basis(end.clone().sub(start)), bend = (o.curve || 0)*rand(-1,1), dur = start.distanceTo(end)/speed;
+      const prev = start.clone();
+      S.task(0, dur, (dt,k) => {
+        const p = start.clone().lerp(end, k).addScaledVector(B.side, Math.sin(Math.PI*k)*bend).addScaledVector(B.up, Math.sin(Math.PI*k)*(o.arc||0));
+        const seg = Math.max(1, Math.ceil(p.distanceTo(prev)/(r*.5)));
+        for (let s=1;s<=seg;s++){
+          _t.copy(prev).lerp(p, s/seg);
+          puff(pool, _t, 5*Math.max(.5,r), { r:r*.45, sp:r*.8, life:[.12,.28], size:[r*1.25,r*.3], g:pal.core, drag:2 });
+          puff(ADD, _t, 3, { r:r*.6, sp:.5, life:[.3,.6], size:[r*1.1,r*.2], g:pal.outer || pal.core });
+          if (pal.smoke && Math.random() < .5) puff(NORM, _t, 1, { r:r*.4, sp:.3, vel:V(0,1,0), life:[.8,1.5], size:[r*.6,r*2], g:pal.smoke, turb:.8 });
+        }
+        S.glow(pal.light, 3*Math.max(.6,r), p); prev.copy(p);
+        if (k >= 1) FX.impact(p, o);
+      });
+    });
+  }
+};
+
+// --- Souffle continu en cône
+FX.stream = o => {
+  const pal = PAL[o.pal], pool = corePool(pal), charge = o.charge ?? .3, life = o.life || .9, len = o.len || 12, sz = o.size || [.4,2];
+  S.pose(o.from === "hand" ? "forward" : "down");
+  S.task(0, charge, (dt,k) => { const m = S.origin(o.from); puff(pool, m, emit(160,dt)/Q, { r:.25, sp:.6, life:[.1,.25], size:[.35,.1], g:pal.core }); S.glow(pal.light, 1.5*k, m); });
+  S.task(charge, o.dur || 2, (dt,k,lt,acc) => {
+    const m = S.origin(o.from), B = basis(AIM.clone().sub(m)), sp = len/life, c = emit(o.rate || 600, dt), ramp = Math.min(1, lt/.25)*(k > .85 ? (1-k)/.15 : 1);
+    for (let i=0;i<c*ramp;i++){
+      const th = rand(0,TAU), rr = (o.cone || .25)*Math.sqrt(Math.random());
+      _d.copy(B.f).addScaledVector(B.side, Math.cos(th)*rr).addScaledVector(B.up, Math.sin(th)*rr).normalize();
+      const v = sp*rand(.75,1.1);
+      pool.spawn(m.x,m.y,m.z, _d.x*v,_d.y*v,_d.z*v, life*rand(.6,1), sz[0]*rand(.7,1.2), sz[1]*rand(.7,1.2), pal.core, .5, o.grav||0, 2);
+      if (i%3===0 && pal.outer) ADD.spawn(m.x,m.y,m.z, _d.x*v*.9,_d.y*v*.9,_d.z*v*.9, life*rand(.7,1.1), sz[0]*1.4, sz[1]*1.3, pal.outer, .6, o.grav||0, 2);
+      if (i%7===0 && pal.smoke) NORM.spawn(m.x,m.y,m.z, _d.x*v*.6,_d.y*v*.6+.8,_d.z*v*.6, life*rand(1.3,2), sz[0], sz[1]*1.6, pal.smoke, .8, -.6, 1.2);
+    }
+    if (o.dust && Math.random() < .6) puff(NORM, V(rand(-2,2),.1,rand(3,12)), 6, { r:.4, sp:1, vel:V(0,.8,5), drag:.6, life:[.8,1.6], size:[.4,1.6], g:pal.smoke });
+    S.glow(pal.light, (o.heavy ? 6 : 3.5)*ramp, m.clone().addScaledVector(B.f, len*.45));
+    if (o.heavy) S.shake(.06*ramp);
+    acc.h = (acc.h || 0) + dt; if (acc.h > .25 && lt > life*.8){ acc.h = 0; S.hit(o.heavy ? .55 : .3); }
+  });
+};
+
+// --- Dragon : tête qui suit une courbe, corps en traînée
+function dragonPath(type, off){
+  const m = S.mouth(), end = AIM.clone().add(V(off*.8, 0, 0));
+  if (type === "arc") return u => m.clone().lerp(end, u).add(V(Math.sin(u*Math.PI*3)*1.1*(1-u*.4) + off*Math.sin(Math.PI*u)*2, Math.sin(Math.PI*u)*2.2, 0));
+  if (type === "rise"){
+    const top = a => { const ang = a*TAU*1.25; return V(off*2 + Math.cos(ang)*1.3, -.6 + a*7.5, 3 + Math.sin(ang)*1.3); };
+    const P1 = top(1), C = V(P1.x, P1.y + 2.5, 7.5);
+    return u => { if (u < .55) return top(u/.55); const b = (u-.55)/.45, ib = 1-b;
+      return V(ib*ib*P1.x + 2*ib*b*C.x + b*b*end.x, ib*ib*P1.y + 2*ib*b*C.y + b*b*end.y, ib*ib*P1.z + 2*ib*b*C.z + b*b*end.z); };
+  }
+  if (type === "sky"){
+    const P0 = V(off*4 + 1.5, 15, 2), C = V(off*3 - 2, 10, 13);
+    return u => { const iu = 1-u; return V(iu*iu*P0.x + 2*iu*u*C.x + u*u*end.x + Math.sin(u*TAU*1.5)*.8, iu*iu*P0.y + 2*iu*u*C.y + u*u*end.y, iu*iu*P0.z + 2*iu*u*C.z + u*u*end.z); };
+  }
+  if (type === "low") { const st = V(off*1.4, .7, 1); const e2 = V(off*.5, .9, 11);
+    return u => st.clone().lerp(e2, u).add(V(Math.sin(u*Math.PI*4)*.45, Math.sin(u*Math.PI*6)*.2, 0)); }
+  if (type === "emerge") return u => V(Math.sin(u*Math.PI*2)*.3, -.6 + easeOut(u)*4, 2 + u*1.4);
+  return u => m.clone().lerp(end, u);
+}
+FX.dragon = o => {
+  const pal = PAL[o.pal], pool = corePool(pal), n = o.n || 1, head = o.head || .8, body = o.body || .7, dur = o.dur || 1.5;
+  S.pose(o.path === "sky" ? "up" : o.path === "rise" ? "forward" : "down");
+  for (let j=0;j<n;j++){
+    const off = j - (n-1)/2;
+    S.at((o.delay || 0) + j*.28, () => {
+      const path = dragonPath(o.path, off); const prev = path(0);
+      if (o.path === "rise" || o.path === "emerge") FX.impact(V(prev.x, .2, prev.z), { pal:o.pal, impact:o.pal === "earth" ? "mud" : "splash", impactR:1 });
+      S.task(0, dur, (dt,k) => {
+        const p = path(o.path === "low" ? k : easeInOut(k)*.15 + k*.85);
+        const steps = Math.max(1, Math.ceil(p.distanceTo(prev)/(head*.3)));
+        for (let s=1;s<=steps;s++){
+          _t.copy(prev).lerp(p, s/steps);
+          puff(pool, _t, 3, { r:head*.4, sp:.4, life:[body*.6,body], size:[head*1.3,head*.15], g:pal.core, turb:.6 });
+          puff(ADD, _t, 2, { r:head*.6, sp:.6, life:[body*.7,body*1.1], size:[head*1.5,head*.3], g:pal.outer || pal.core });
+          if (pal.smoke && Math.random() < .35) puff(NORM, _t, 1, { r:head*.5, sp:.4, vel:V(0,.6,0), life:[1,1.8], size:[head*.8,head*2], g:pal.smoke, turb:.8 });
+        }
+        puff(ADD, p, 5, { r:head*.25, sp:1.4, life:[.1,.2], size:[head*1.7,head], g:pal.core });
+        S.glow(pal.light, 3.5, p); prev.copy(p);
+        if (k >= 1 && o.impact) FX.impact(p, { ...o, impactR:o.impactR || head*2 });
+      });
+    });
+  }
+};
+
+// --- Rafale de paume
+FX.gust = o => {
+  const pal = PAL[o.pal]; S.pose("forward");
+  S.at(.35, () => {
+    const h = S.hand(), B = basis(AIM.clone().sub(h));
+    puff(ADD, h, 520, { dir:B.f, spread:.32, sp0:20, sp1:30, drag:1.4, life:[.35,.6], size:[.16,.05], g:pal.core });
+    puff(ADD, h, 160, { dir:B.f, spread:.45, sp0:8, sp1:16, drag:2, life:[.4,.8], size:[.6,1.4], g:pal.outer });
+    ring(ADD, h, 140, { rad:.2, sp:4, drag:4, life:[.25,.4], size:[.25,.06], g:pal.core, axis:B.f });
+    S.flash(pal.light, 2.5, h); S.shake(.1);
+  });
+  S.at(.8, () => { FX.impact(AIM.clone(), { pal:o.pal, impact:"shock", impactR:1.2 }); puff(NORM, V(0,.2,11), 50, { r:.8, sp:3, vel:V(0,.6,3), drag:1.4, life:[1,1.8], size:[.5,1.8], g:pal.smoke }); });
+};
+
+// --- Éclair rampant au sol
+FX.crawl = o => {
+  S.pose("forward");
+  S.task(.25, .2, () => { const h = S.hand(); bolt(h, V(0,.05,1.1), { w:.08, depth:4, branches:0, life:.06 }); });
+  S.task(.35, 1.9, (dt,k,lt) => {
+    const front = 1.1 + 9.9*Math.min(1, lt/.65), pts = [V(0,.05,1.1)];
+    for (let z = 1.1; z < front; z += .9) pts.push(V(Math.sin(z*1.7 + lt*9)*.5, .06 + Math.random()*.08, Math.min(z+.9, front)));
+    if (Math.random() < .8) boltCurve(pts, { w:.07, glow:.3, jag:.15, depth:3, life:.05, branchChance:.25 });
+    puff(ADD, pts[pts.length-1], 6, { sp0:2, sp1:5, vel:V(0,2,0), grav:9, life:[.2,.5], size:[.1,.03], g:PAL.lightning.spark });
+    S.glow(PAL.lightning.light, 2.5 + Math.random()*2, pts[pts.length-1]);
+    if (lt > .65){ for (let i=0;i<2;i++){ rdir(_d); const a = V(_d.x*.35, rand(.2,2.2), 11 + _d.z*.35); rdir(_d2);
+      bolt(a, a.clone().addScaledVector(_d2, rand(.5,1.1)), { w:.06, depth:3, branches:0, life:.05 }); }
+      if (Math.random() < dt*10) S.hit(.18); }
+  });
+};
+
+// --- Lances d'éclairs (Gian)
+FX.lances = o => {
+  const n = o.n || 5; S.pose("down");
+  S.task(0, .55, (dt,k) => { const m = S.mouth(); puff(ADD, m, emit(200,dt)/Q, { r:.5, sp:.4, life:[.08,.15], size:[.25,.05], g:PAL.lightning.core }); S.glow(PAL.lightning.light, 2*k, m); });
+  const ends = Array.from({length:n}, (_,i) => V((i-(n-1)/2)*.9, rand(.4,2.4), 11 + rand(-.6,.6)));
+  S.task(.55, 1, (dt,k) => {
+    const m = S.mouth(), reach = Math.min(1, k*5);
+    ends.forEach(e => { const end = m.clone().lerp(e, reach); bolt(m, end, { w:.11, glow:.5, jag:.08, depth:5, branches:1, life:.05 });
+      if (reach >= 1) puff(ADD, e, 3, { sp0:2, sp1:6, life:[.2,.5], size:[.1,.03], g:PAL.lightning.spark, grav:6 }); });
+    S.glow(PAL.lightning.light, 6 + Math.random()*4, AIM); S.shake(.06);
+    if (Math.random() < dt*8) S.hit(.35);
+  });
+};
+
+// --- Lames de vent (Kamaitachi)
+FX.blades = o => {
+  const pal = PAL[o.pal], n = o.n || 6; S.pose("forward");
+  for (let j=0;j<n;j++){
+    const xo = rand(-1.6,1.6), yo = rand(-.3,1.2), roll = rand(-.9,.9), R = rand(1.2,2), dur = .9;
+    S.task(.2 + j*.09, dur, (dt,k,lt,acc) => {
+      const cz = 1 + k*20, cx = xo*(1+k), cy = 1.3 + yo*k;
+      for (let i=0;i<Math.round(36*Q);i++){
+        const th = rand(-1.25,1.25), sx = Math.sin(th)*R, sy = Math.cos(th)*R - R*.55;
+        const x = cx + sx*Math.cos(roll) - sy*Math.sin(roll), y = cy + sx*Math.sin(roll) + sy*Math.cos(roll), z = cz - (1-Math.cos(th))*R*.8;
+        ADD.spawn(x, Math.max(.05,y), z, 0, 0, 4, .1, .2*(1-Math.abs(th)/1.6), .05, pal.core);
+      }
+      if (Math.random() < .5) puff(NORM, V(cx,.1,cz), 3, { r:.5, sp:1.2, vel:V(0,.7,2), drag:1, life:[.8,1.4], size:[.3,1.2], g:pal.smoke });
+      if (!acc.hit && cz > 11){ acc.hit = 1; S.hit(.55); puff(ADD, V(cx*.3, cy, 11), 30, { sp0:2, sp1:6, life:[.2,.4], size:[.12,.03], g:pal.spark }); }
+    });
+  }
+  S.flash(pal.light, 2, V(0,1.2,2));
+};
+
+// --- Murs
+FX.wall = o => {
+  const pal = PAL[o.pal];
+  if (o.kind === "spiral"){
+    S.pose("forward");
+    S.at(.05, () => FX.impact(V(0,.1,0), { pal:o.pal, impact:"splash", impactR:1.2 }));
+    S.task(.1, 2.7, (dt,k,lt) => {
+      const h = 3.6*Math.min(1, lt/.45), fade = k > .85 ? (1-k)/.15 : 1, c = emit(1500*fade, dt);
+      for (let i=0;i<c;i++){
+        const s = Math.floor(Math.random()*12), y = Math.random()*h, a = s*TAU/12 + y*1.1 + lt*5.5, rad = 2.1 + rand(-.12,.12);
+        ADD.spawn(Math.cos(a)*rad, y, Math.sin(a)*rad, -Math.sin(a)*2, rand(1,3), Math.cos(a)*2, rand(.15,.3), .38, .12, i%4 ? pal.core : pal.outer, 1, 0, .5);
+      }
+      if (Math.random() < .7) puff(NORM, V(rand(-2,2), h, rand(-2,2)), 3, { r:.3, sp:1, vel:V(0,1,0), grav:4, life:[.5,1], size:[.4,1.1], g:pal.smoke });
+      S.glow(pal.light, 2.5*fade, V(0,1.8,0));
+      // projectiles adverses qui se brisent sur le mur
+      if (Math.random() < dt*2.2) FX.impact(V(rand(-1.2,1.2), rand(.8,2.6), 2.1), { pal:"water", impact:"splash", impactR:.6 });
+    });
+    S.at(2.8, () => puff(ADD, V(0,2,0), 300, { r:2, sp0:1, sp1:4, vel:V(0,1,0), grav:10, life:[.6,1.2], size:[.3,.1], g:pal.core }));
+  } else {
+    S.pose("forward");
+    const g = new THREE.BoxGeometry(6, 3.6, .9, 12, 8, 2), pa = g.attributes.position;
+    for (let i=0;i<pa.count;i++){ pa.setXYZ(i, pa.getX(i) + rand(-.08,.08), pa.getY(i) + rand(-.08,.08), pa.getZ(i) + rand(-.12,.12)); }
+    g.computeVertexNormals();
+    const wall = S.addMesh(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color:"#6e5a44", roughness:1, flatShading:true })));
+    wall.position.set(0, -1.9, 2.8);
+    S.task(.3, .5, (dt,k) => {
+      wall.position.y = -1.9 + 3.7*easeOut(k); S.shake(.12);
+      puff(NORM, V(rand(-3,3), .1, 2.8 + rand(-.6,.6)), 10, { r:.2, sp0:1, sp1:3, vel:V(0,3,0), grav:9, life:[.6,1.2], size:[.18,.14], g:PAL.earth.core });
+      puff(NORM, V(rand(-3,3), .2, 2.8), 4, { r:.4, sp:1.5, vel:V(0,.8,0), drag:1, life:[1.2,2], size:[.7,2.2], g:pal.smoke });
+    });
+    S.at(1.1, () => FX.projectile({ pal:"fire", origin:V(0,1.4,10.2), to:V(0,1.4,3.4), r:.9, speed:13, charge:.3, impact:"explode", impactR:1.6, noHit:true }));
+    S.at(3, () => S.task(0, .7, (dt,k) => { wall.position.y = 1.8 - 3.8*k*k; puff(NORM, V(rand(-3,3), rand(.3,2.5), 2.8), 6, { r:.2, sp:2, grav:9, life:[.6,1.1], size:[.2,.16], g:PAL.earth.outer }); }));
+  }
+};
+
+// --- Vagues
+FX.wave = o => {
+  const pal = PAL[o.pal]; S.pose("forward");
+  if (o.kind === "water"){
+    S.task(.2, 2.8, (dt,k,lt,acc) => {
+      const zf = -4 + k*22, H = 4.2*Math.sin(Math.min(1, k*2.2)*Math.PI/2)*(k > .8 ? (1-k)/.2*.6 + .4 : 1), c = emit(2600, dt), sp = 22/2.8;
+      for (let i=0;i<c;i++){
+        const x = rand(-7,7), edge = 1 - Math.pow(Math.abs(x)/7, 3), y = Math.random()*H*edge;
+        ADD.spawn(x, y, zf - y*.2 + rand(-.6,.3), rand(-.3,.3), rand(-.5,1.5), sp*rand(.9,1.15), rand(.35,.7), rand(.5,.9), .2, i%3 ? pal.core : pal.outer, .3, 1, 1);
+        if (i%9===0) NORM.spawn(x, H*edge + rand(-.2,.3), zf + rand(-.2,.4), rand(-.5,.5), rand(.5,2), sp*1.05, rand(.5,1), .6, 1.4, pal.smoke, .4, 3, 1);
+      }
+      S.glow(pal.light, 4, V(0, H*.6, zf)); S.shake(.08);
+      if (!acc.hit && zf > 10.5){ acc.hit = 1; S.hit(2.2); }
+    });
+  } else {
+    S.at(.1, () => { S.shake(.15); puff(NORM, V(0,.1,1.4), 40, { r:.8, sp0:1, sp1:3, vel:V(0,2,0), grav:9, life:[.6,1.1], size:[.25,.2], g:pal.core }); });
+    S.task(.2, 2.2, (dt,k,lt,acc) => {
+      const zf = 1 + k*13, c = emit(1100, dt);
+      for (let i=0;i<c;i++){
+        const z = rand(1, zf), w = 1.2 + (z-1)*.18, x = rand(-w, w), y = rand(0,.55)*(1 - Math.abs(x)/w*.6);
+        NORM.spawn(x, y, z, rand(-.2,.2), rand(0,.4), rand(5,7), rand(.25,.5), rand(.35,.6), .3, i%3 ? pal.core : pal.outer, 1, 0, 1);
+      }
+      puff(NORM, V(0,.4,zf), 4, { r:1, sp0:1, sp1:3, vel:V(0,2.5,4), grav:9, life:[.5,1], size:[.22,.18], g:pal.core });
+      if (!acc.hit && zf > 10.5){ acc.hit = 1; S.hit(1.5); }
+      S.shake(.04);
+    });
+  }
+};
+
+// --- Orbes en main : Rasengan, Chidori
+FX.orb = o => {
+  const pal = PAL[o.pal], r = o.r || .35, charge = 1.4, dashT = .35, stopZ = 9.5;
+  S.pose("forward");
+  const core = S.addMesh(new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color:pal.light, transparent:true, opacity:.9, blending:THREE.AdditiveBlending, depthWrite:false })));
+  core.scale.setScalar(.001);
+  const axes = Array.from({length:6}, () => rdir(V()).clone());
+  S.task(0, charge + dashT + .55, (dt,k,lt) => {
+    const h = S.hand(), grow = Math.min(1, lt/.5);
+    core.position.copy(h); core.scale.setScalar(r*(o.kind === "chidori" ? .45 : .8)*grow*(.92 + .1*Math.sin(lt*50)));
+    if (o.kind === "rasengan"){
+      const c = emit(1400*Math.max(.5,r)*grow, dt);
+      for (let i=0;i<c;i++){ const ax = axes[i%6]; rdir(_d); _d2.crossVectors(ax, _d).normalize();
+        const R = r*rand(.9,1.25), sp = r*14;
+        ADD.spawn(h.x+_d.x*R, h.y+_d.y*R, h.z+_d.z*R, _d2.x*sp, _d2.y*sp, _d2.z*sp, rand(.08,.16), r*.35, r*.08, i%3 ? pal.core : pal.outer); }
+      S.glow(pal.light, 3*grow, h);
+    } else {
+      for (let i=0;i<(o.hot ? 4 : 3);i++){ rdir(_d); bolt(h, h.clone().addScaledVector(_d, rand(.4,1.3)*(o.hot ? 1.3 : 1)), { w:.05, glow:.22, depth:3, branches:0, life:.05 }); }
+      puff(ADD, h, emit(400,dt)/Q, { r:r*.5, sp0:1, sp1:5, life:[.15,.35], size:[.1,.03], g:pal.spark, grav:6 });
+      S.glow(pal.light, (2.5 + Math.random()*3)*grow, h);
+      if (lt < charge && Math.random() < .4) bolt(V(h.x, .03, h.z), V(h.x + rand(-1.2,1.2), .03, h.z + rand(-1.2,.4)), { w:.04, depth:3, branches:0, life:.05 });
+    }
+  });
+  S.task(charge, dashT, (dt,k) => { caster.position.z = stopZ*easeInOut(k); const h = S.hand();
+    puff(ADD, h, 12, { r:r*.6, sp:.4, life:[.2,.4], size:[r*.8,r*.1], g:pal.outer || pal.core });
+    puff(NORM, V(0,.1,caster.position.z), 2, { r:.3, sp:1, vel:V(0,.5,0), life:[.6,1.2], size:[.3,1], g:PAL.earth.smoke }); });
+  S.at(charge + dashT, () => {
+    const p = S.hand();
+    if (o.kind === "rasengan"){
+      S.task(0, .5, (dt,k) => { ring(ADD, p, 60*r*3, { rad:r, sp:6*r*3, drag:3, life:[.2,.4], size:[.25,.05], g:pal.core, axis:V(0,0,1) }); S.hit(.25); S.glow(pal.light, 6, p); S.shake(.08); });
+      S.at(.5, () => FX.impact(p.clone().add(V(0,0,.8)), { pal:o.pal, impact:"shock", impactR:r*4.5 }));
+    } else {
+      FX.impact(p, { pal:o.pal, impact:"spark", impactR:o.hot ? 2.6 : 2 });
+    }
+  });
+  S.at(charge + dashT + .55, () => S.removeMesh(core));
+  S.task(charge + dashT + .9, .5, (dt,k) => { caster.position.z = stopZ*(1 - easeInOut(k)); if (k >= 1) S.pose("down"); });
+};
+
+// --- Prison aqueuse
+FX.prison = o => {
+  const pal = PAL[o.pal], C = V(0, 1.25, 11), R = 1.75; S.pose("forward");
+  const sph = S.addMesh(new THREE.Mesh(new THREE.SphereGeometry(R, 32, 20), new THREE.MeshStandardMaterial({ color:"#3b9be0", transparent:true, opacity:0, roughness:.1, metalness:.2, emissive:"#0a3a66", depthWrite:false })));
+  sph.position.copy(C); sph.scale.setScalar(.01);
+  S.task(.15, .7, (dt,k) => {
+    const c = emit(900, dt);
+    for (let i=0;i<c;i++){ const a = rand(0,TAU) + k*8, rr = R*(1-k*.3);
+      ADD.spawn(Math.cos(a)*rr, rand(0, .5 + k*2.2), 11 + Math.sin(a)*rr, -Math.sin(a)*3, rand(2,5), Math.cos(a)*3, .3, .35, .1, pal.core, 1, 0, 1); }
+    sph.scale.setScalar(Math.max(.01, easeOut(clamp01((k-.4)/.6)))); sph.material.opacity = .28*clamp01((k-.4)/.6);
+  });
+  S.task(.85, 2.6, (dt,k,lt) => {
+    const c = emit(1100, dt);
+    for (let i=0;i<c;i++){ const band = Math.floor(Math.random()*9), phi = (band+.5)/9*Math.PI + rand(-.08,.08), th = rand(0,TAU);
+      const x = Math.sin(phi)*Math.cos(th), y = Math.cos(phi), z = Math.sin(phi)*Math.sin(th), sp = 2.4*(band%2 ? 1 : -1);
+      ADD.spawn(C.x + x*R, C.y + y*R, C.z + z*R, -z*sp, 0, x*sp, rand(.15,.3), .22, .06, i%3 ? pal.core : pal.outer); }
+    puff(ADD, C, emit(30,dt)/Q, { r:R*.7, sp:.3, vel:V(0,.8,0), life:[.6,1.2], size:[.08,.12], g:pal.spark });
+    sph.rotation.y += dt*1.5; S.glow(pal.light, 2, C);
+    if (Math.random() < dt*3) S.hit(.08);
+  });
+  S.at(3.45, () => { S.removeMesh(sph); FX.impact(C, { pal:o.pal, impact:"splash", impactR:2.2 }); });
+};
+
+// --- Invocation
+const toadMat = () => new THREE.MeshStandardMaterial({ color:"#b5532c", roughness:.7 });
+function makeToad(){
+  const g = new THREE.Group(), m = toadMat(), belly = new THREE.MeshStandardMaterial({ color:"#e0b27a", roughness:.8 });
+  const eyeM = new THREE.MeshStandardMaterial({ color:"#e8c547", roughness:.4, emissive:"#3a2a00" }), pup = new THREE.MeshStandardMaterial({ color:"#111" });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), m); body.scale.set(2, 1.5, 1.9); body.position.y = 1.5; g.add(body);
+  const b2 = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), belly); b2.scale.set(1.5, 1.05, .9); b2.position.set(0, 1.25, 1.15); g.add(b2);
+  [-1, 1].forEach(s => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(.45, 16, 12), eyeM); e.position.set(s*.95, 2.8, .8); g.add(e);
+    const p = new THREE.Mesh(new THREE.BoxGeometry(.5, .12, .1), pup); p.position.set(s*.98, 2.82, 1.22); g.add(p);
+    const leg = new THREE.Mesh(new THREE.SphereGeometry(.6, 12, 10), m); leg.scale.set(1, .7, 1.4); leg.position.set(s*1.8, .45, .6); g.add(leg);
+  });
+  return g;
+}
+FX.summon = o => {
+  S.pose("forward");
+  const lines = Array.from({length:7}, (_,i) => (i-3)*.42);
+  S.task(.3, .7, (dt,k) => {
+    lines.forEach(a => { const L = 3.6*k; for (let i=0;i<2;i++){ const l = rand(0, L); NORM.spawn(Math.sin(a)*l, .03, 1.2 + Math.cos(a)*l, 0,0,0, 2.6, .16, .14, PAL.ink.core); } });
+    for (let i=0;i<4;i++){ const a = rand(0, TAU*k); NORM.spawn(Math.cos(a)*1.1, .03, 1.2 + Math.sin(a)*1.1, 0,0,0, 2.6, .18, .15, PAL.ink.core); }
+  });
+  let toad;
+  S.at(1.05, () => {
+    puff(NORM, V(0,1.6,4.6), 260, { r:1.6, sp0:1, sp1:5, vel:V(0,1.2,0), drag:2, life:[1.4,2.4], size:[1.8,4.6], g:PAL.smoke.smoke, turb:1 });
+    S.flash("#ffffff", 3, V(0,2,4.6)); S.shake(.35);
+    toad = S.addMesh(makeToad()); toad.position.set(0, 0, 4.6); toad.scale.setScalar(.01);
+  });
+  S.task(1.1, .35, (dt,k) => { if (toad) toad.scale.setScalar(Math.max(.01, easeOut(k))); });
+  S.task(1.5, 2, (dt,k,lt) => { if (toad) toad.children[0].scale.y = 1.5*(1 + Math.sin(lt*5)*.03); });
+  S.at(3.6, () => { puff(NORM, V(0,1.6,4.6), 200, { r:1.6, sp0:1, sp1:4, vel:V(0,1,0), drag:2, life:[1.2,2], size:[1.6,4], g:PAL.smoke.smoke }); if (toad) S.removeMesh(toad); });
+};
+
+// --- Cendres puis ignition
+FX.ash = o => {
+  FX.stream({ pal:"ash", from:"mouth", len:9, cone:.35, dur:1.6, rate:700, size:[.4,1.8], life:1.8, charge:.3 });
+  S.at(2.5, () => {
+    const p = S.mouth(); bolt(p, p.clone().add(V(0,0,.6)), { pal:"flash", w:.06, depth:2, branches:0 });
+    for (let i=0;i<14;i++){ const z = 2.5 + i*.62; S.at(i*.035, () => FX.impact(V(rand(-1,1)*(.4 + i*.12), 1.4 + rand(-.5,.6), z), { pal:"fire", impact:"explode", impactR:1 + i*.05 })); }
+  });
+};
+
+// --- Dragon de terre et boulets de boue
+FX.earthDragon = o => {
+  S.pose("forward");
+  FX.dragon({ pal:"earth", path:"emerge", head:1, dur:.8, body:3.2 });
+  S.task(.8, 2.2, (dt,k) => { const h = V(Math.sin(Math.PI*2)*.3, 3.4 + Math.sin(k*20)*.05, 3.4); puff(NORM, h, 4, { r:.6, sp:.3, life:[.4,.8], size:[1.1,.6], g:PAL.earth.core }); });
+  S.at(1, () => FX.projectile({ pal:"earth", origin:V(0, 3.4, 4), r:.42, n:5, gap:.22, spread:1.4, speed:15, charge:.25, impact:"mud", impactR:1.1 }));
+  S.at(3.1, () => puff(NORM, V(0,2,3.4), 120, { r:1.4, sp0:1, sp1:3, grav:9, life:[.6,1.2], size:[.3,.25], g:PAL.earth.outer }));
+};
+
+// --- Marais
+FX.swamp = o => {
+  S.pose("forward");
+  const disc = S.addMesh(new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshStandardMaterial({ color:"#33261a", roughness:.25, metalness:.1 })));
+  disc.rotation.x = -Math.PI/2; disc.position.set(0, .02, 11); disc.scale.setScalar(.01);
+  S.task(.2, .8, (dt,k) => { disc.scale.setScalar(Math.max(.01, 3.4*easeOut(k))); ring(NORM, V(0,.05,11), 14, { rad:3.4*easeOut(k), sp:.6, up:.8, grav:4, life:[.4,.8], size:[.25,.2], g:PAL.earth.core }); });
+  S.task(.6, 2.6, (dt,k) => {
+    dummy.userData.sink = -1.3*easeInOut(Math.min(1, k*2.2));
+    for (let i=0;i<emit(40,dt);i++){ const a = rand(0,TAU), rr = Math.sqrt(Math.random())*3.2;
+      NORM.spawn(Math.cos(a)*rr, .04, 11 + Math.sin(a)*rr, 0, .25, 0, rand(.5,1), .05, rand(.3,.5), PAL.earth.core); }
+    if (Math.random() < dt*3) S.hit(.06);
+  });
+  S.task(3.4, .7, (dt,k) => { dummy.userData.sink = -1.3*(1-k); disc.scale.setScalar(Math.max(.01, 3.4*(1-k))); });
+};
+
+// --- Armure de pierre (Domu)
+FX.stone = o => {
+  S.pose("down");
+  S.task(0, 1, (dt,k) => {
+    for (let i=0;i<emit(320,dt);i++){ rdir(_d); _d.y = Math.abs(_d.y)*.8 + .1; const p = V(_d.x*3, _d.y*3, _d.z*3), t = V(rand(-.15,.15), rand(.3,1.8), rand(-.1,.1));
+      NORM.spawn(p.x,p.y,p.z, (t.x-p.x)/.5, (t.y-p.y)/.5, (t.z-p.z)/.5, .5, .12, .08, PAL.earth.outer); }
+  });
+  S.task(.6, .5, (dt,k) => { casterMat.color.copy(CASTER_COLOR).lerp(new THREE.Color("#4a4744"), k); casterMat.roughness = .6 + k*.35; });
+  S.at(1.1, () => { S.shake(.18); S.flash(PAL.earth.light, 2.5, V(0,1.2,0)); puff(NORM, V(0,.1,0), 40, { r:.5, sp:2, flat:.2, drag:1.5, life:[1,1.6], size:[.4,1.4], g:PAL.earth.smoke }); });
+  // kunai qui ricochent
+  [1.5, 1.8, 2.05, 2.3].forEach(t => S.at(t, () => {
+    const e = V(rand(-.2,.2), rand(.8,1.7), .25), st = V(rand(-1,1), 1.4, 10.6), prev = st.clone();
+    S.task(0, .28, (dt,k) => { const p = st.clone().lerp(e, k); puff(ADD, p, 3, { sp:.2, life:[.08,.12], size:[.12,.04], g:PAL.flash.spark }); prev.copy(p);
+      if (k >= 1){ puff(ADD, e, 40, { sp0:2, sp1:7, life:[.2,.5], size:[.08,.03], g:PAL.flash.spark, grav:8 }); S.flash("#ffd890", 1.5, e); } });
+  }));
+  S.task(1.1, 2.3, () => { if (Math.random() < .3) puff(NORM, V(rand(-.2,.2), rand(.5,1.7), rand(-.1,.1)), 1, { sp:.3, grav:9, life:[.5,.9], size:[.07,.05], g:PAL.earth.outer }); });
+  S.task(3.4, .5, (dt,k) => { casterMat.color.copy(new THREE.Color("#4a4744")).lerp(CASTER_COLOR, k); casterMat.roughness = .95 - k*.35;
+    if (k < .3) puff(NORM, V(0, rand(.4,1.8), 0), 6, { r:.3, sp0:.5, sp1:2, grav:9, life:[.5,.9], size:[.1,.08], g:PAL.earth.outer }); });
+};
+
+// --- Clones
+FX.clones = o => {
+  const n = o.n || 2; S.pose("forward");
+  const spots = [];
+  if (n <= 2) spots.push(V(-1.7,0,.6), V(1.7,0,.6));
+  else for (let i=0;i<n;i++){ const row = Math.floor(i/9), col = i%9; spots.push(V((col-4)*1.35 + (row%2)*.6, 0, -1.2 + row*2.6 + rand(-.3,.3))); }
+  spots.forEach((p, i) => {
+    const c = clones[i]; const t = .45 + (n > 2 ? i*.03 : 0);
+    S.at(t, () => { puff(NORM, p.clone().add(V(0,1,0)), n > 2 ? 34 : 70, { r:.5, sp0:.5, sp1:2.6, drag:2.5, life:[.8,1.4], size:[.9,2.2], g:PAL.smoke.smoke, turb:.8 });
+      c.position.copy(p); c.rotation.y = rand(-.15,.15); c.visible = true; });
+    S.at(3.2 + (n > 2 ? i*.02 : 0), () => { puff(NORM, p.clone().add(V(0,1,0)), n > 2 ? 26 : 60, { r:.5, sp0:.5, sp1:2.2, drag:2.5, life:[.7,1.2], size:[.8,2], g:PAL.smoke.smoke }); c.visible = false; });
+  });
+};
+
+// --- Clone de foudre
+FX.raitonClone = o => {
+  S.pose("forward"); const c = clones[0], p0 = V(1.7,0,.6);
+  S.at(.4, () => { puff(NORM, p0.clone().add(V(0,1,0)), 70, { r:.5, sp0:.5, sp1:2.6, drag:2.5, life:[.8,1.4], size:[.9,2.2], g:PAL.smoke.smoke }); c.position.copy(p0); c.visible = true; });
+  S.task(.5, 1.4, () => { const ch = S.chest(c); for (let i=0;i<2;i++){ rdir(_d); const a = ch.clone().add(V(_d.x*.3, _d.y*.8, _d.z*.3)); rdir(_d2); bolt(a, a.clone().addScaledVector(_d2, rand(.4,.9)), { w:.05, depth:3, branches:0, life:.05 }); }
+    S.glow(PAL.lightning.light, 2 + Math.random()*2, ch); });
+  S.task(1.9, .35, (dt,k) => { c.position.set(1.7*(1-k) + .2*k, 0, .6 + (9.4-.6)*easeInOut(k)); const ch = S.chest(c); puff(ADD, ch, 10, { r:.3, sp:.5, life:[.1,.25], size:[.2,.05], g:PAL.lightning.core }); });
+  S.at(2.25, () => { c.visible = false; const p = AIM.clone().add(V(0,0,-.6));
+    for (let i=0;i<10;i++){ rdir(_d); bolt(p, p.clone().addScaledVector(_d, rand(1.5,3)), { w:.09, glow:.4, depth:4, branches:1, life:.12 }); }
+    FX.impact(p, { pal:"lightning", impact:"spark", impactR:2.6 }); });
+};
+
+// --- Rasenshuriken
+FX.rasenshuriken = o => {
+  const pal = PAL.wind, charge = 1.7; S.pose("up");
+  const core = S.addMesh(new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color:"#dff8ff", transparent:true, opacity:.95, blending:THREE.AdditiveBlending, depthWrite:false })));
+  core.scale.setScalar(.01);
+  let pos = V(), thrown = null;
+  S.task(0, 2.8, (dt,k,lt) => {
+    if (!thrown) pos = S.hand().add(V(0,.5,0));
+    const grow = Math.min(1, lt/.8); core.position.copy(pos); core.scale.setScalar(.38*grow*(.95 + .06*Math.sin(lt*60)));
+    const c = emit(1600*grow, dt);
+    for (let i=0;i<c;i++){
+      const blade = Math.floor(Math.random()*4), a0 = lt*22 + blade*Math.PI/2, rr = rand(.45, 1.85)*grow, a = a0 - rr*.55 + rand(-.12,.12);
+      const x = Math.cos(a)*rr, z = Math.sin(a)*rr, sp = 16*rr;
+      ADD.spawn(pos.x + x, pos.y + rand(-.05,.05)*rr, pos.z + z, -Math.sin(a)*sp*.15, 0, Math.cos(a)*sp*.15, rand(.06,.12), .15, .04, i%4 ? pal.core : PAL.chakra.core);
+    }
+    puff(ADD, pos, emit(500,dt)/Q, { r:.45*grow, sp:4, life:[.06,.12], size:[.22,.05], g:PAL.chakra.core });
+    S.glow("#bff6ff", 3.5*grow, pos);
+  });
+  S.at(charge, () => { S.pose("forward"); const st = pos.clone(), end = AIM.clone(), dur = st.distanceTo(end)/12;
+    thrown = true;
+    S.task(0, dur, (dt,k) => { pos.copy(st).lerp(end, k); puff(ADD, pos, 8, { r:.5, sp:.4, life:[.2,.4], size:[.6,.1], g:pal.outer });
+      if (k >= 1) dome(end); }); });
+  function dome(p){
+    S.removeMesh(core);
+    S.flash("#e6fbff", 14, p); S.shake(.9);
+    const shell = S.addMesh(new THREE.Mesh(new THREE.SphereGeometry(1, 40, 24), new THREE.MeshBasicMaterial({ color:"#cff4ff", transparent:true, opacity:.22, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide })));
+    shell.position.copy(p);
+    S.task(0, 1.9, (dt,k,lt) => {
+      const R = 4.6*easeOut(Math.min(1, lt/.3))*(k > .85 ? 1 - (k-.85)/.15*.3 : 1), fade = k > .8 ? (1-k)/.2 : 1;
+      shell.scale.setScalar(R); shell.material.opacity = .22*fade;
+      const c = emit(2600*fade, dt);
+      for (let i=0;i<c;i++){ rdir(_d); const rr = R*Math.cbrt(Math.random()); rdir(_d2);
+        ADD.spawn(p.x+_d.x*rr, Math.max(.05, p.y+_d.y*rr), p.z+_d.z*rr, _d2.x*14, _d2.y*14, _d2.z*14, rand(.04,.09), .12, .03, i%3 ? pal.core : PAL.chakra.core); }
+      for (let i=0;i<emit(500*fade,dt);i++){ rdir(_d); ADD.spawn(p.x+_d.x*R, Math.max(.05, p.y+_d.y*R), p.z+_d.z*R, 0,0,0, .12, .35, .1, pal.core); }
+      S.glow("#d8f8ff", 10*fade, p); S.shake(.25*fade);
+      if (Math.random() < dt*8) S.hit(.35);
+      if (Math.random() < .5) puff(NORM, V(p.x + rand(-4,4), .1, p.z + rand(-4,4)), 3, { r:.5, sp:3, flat:.3, drag:1, life:[1,1.8], size:[.6,2], g:pal.smoke });
+    });
+    S.at(1.9, () => { S.removeMesh(shell); ring(ADD, p, 300, { rad:3, sp:8, drag:3, life:[.4,.7], size:[.3,.06], g:pal.core }); });
+  }
+};
+
+// --- Kirin
+FX.kirin = o => {
+  S.pose("up");
+  S.task(0, 3.6, (dt,k,lt) => {
+    const form = Math.min(1, lt/1.6), c = emit(120*(k > .85 ? (1-k)/.15 : 1), dt);
+    for (let i=0;i<c;i++){ const a = rand(0,TAU), rr = Math.sqrt(Math.random())*7*form, x = Math.cos(a)*rr, z = Math.sin(a)*rr;
+      NORM.spawn(x, 10.5 + rand(-1,1), 11 + z, -z*.08, 0, x*.08, rand(2,3), rand(3,5), rand(5,7), PAL.cloud.smoke, 0, 0, .3); }
+    if (lt < 2.2 && Math.random() < dt*5){ const a = V(rand(-5,5), rand(10,11), 11 + rand(-5,5)); const b = a.clone().add(V(rand(-3,3), rand(-.6,.6), rand(-3,3)));
+      bolt(a, b, { w:.08, glow:.6, depth:4, branches:1, life:.08 }); S.flash("#9cb8ff", 2, a); }
+  });
+  S.at(2.3, () => { S.flash("#ffffff", 22, AIM); S.shake(1.3); S.hit(3); });
+  S.task(2.3, .75, (dt,k) => {
+    const pts = []; for (let i=0;i<=10;i++){ const u = i/10; pts.push(V(Math.sin(u*Math.PI*2.5)*2.2*(1-u), 10.5 - u*9.9, 11 - Math.sin(u*Math.PI*1.5)*1.8*(1-u))); }
+    boltCurve(pts, { w:.5*(1-k*.5), glow:2.2, jag:.06, depth:4, life:.06, branchChance:.6 });
+    S.glow("#dfe9ff", 14*(1-k), AIM);
+    puff(ADD, V(0,.3,11), 40, { sp0:3, sp1:10, vel:V(0,3,0), grav:9, life:[.4,1], size:[.14,.05], g:PAL.lightning.spark });
+  });
+  S.at(2.35, () => {
+    ring(ADD, V(0,.2,11), 400, { rad:.5, sp:12, drag:3, life:[.5,.9], size:[.4,.08], g:PAL.lightning.core });
+    puff(NORM, V(0,.4,11), 120, { r:1.5, sp:4, flat:.4, vel:V(0,1,0), drag:1.2, life:[1.6,2.6], size:[1,3.6], g:PAL.earth.smoke, turb:1 });
+    const scorch = S.addMesh(new THREE.Mesh(new THREE.CircleGeometry(2.6, 40), new THREE.MeshBasicMaterial({ color:"#0b0c10", transparent:true, opacity:.75 })));
+    scorch.rotation.x = -Math.PI/2; scorch.position.set(0, .015, 11);
+  });
+};
+
+// --- Hiraishin
+FX.hiraishin = o => {
+  S.pose("forward"); const mark = V(1.3, 0, 12.8);
+  S.at(.2, () => { const st = S.hand(), end = mark.clone().add(V(0,.25,0));
+    S.task(0, .45, (dt,k) => { const p = st.clone().lerp(end, k).add(V(0, Math.sin(Math.PI*k)*.8, 0)); puff(ADD, p, 6, { sp:.2, life:[.15,.3], size:[.18,.05], g:PAL.flash.core }); }); });
+  S.task(.65, 2.8, (dt,k,lt) => { puff(ADD, mark.clone().add(V(0,.25,0)), emit(60,dt)/Q, { r:.15, sp:.5, vel:V(0,.6,0), life:[.3,.6], size:[.15,.04], g:PAL.flash.core }); });
+  const jump = (to, rotY) => {
+    const a = S.chest(); S.flash(PAL.flash.light, 7, a);
+    puff(ADD, a, 160, { r:.4, sp0:1, sp1:6, drag:3, life:[.2,.5], size:[.4,.08], g:PAL.flash.core });
+    caster.position.copy(to); caster.rotation.y = rotY;
+    const b = S.chest();
+    for (let i=0;i<=60;i++){ _t.copy(a).lerp(b, i/60); ADD.spawn(_t.x,_t.y,_t.z, 0,0,0, rand(.25,.5), .35, .05, PAL.flash.core); }
+    puff(ADD, b, 160, { r:.4, sp0:1, sp1:6, drag:3, life:[.2,.5], size:[.4,.08], g:PAL.flash.core });
+    ring(ADD, V(to.x,.1,to.z), 120, { rad:.3, sp:5, drag:3, life:[.3,.5], size:[.25,.05], g:PAL.flash.outer });
+  };
+  S.at(1.25, () => { jump(mark, Math.PI); S.pose("forward"); });
+  S.at(1.45, () => { const p = AIM.clone().add(V(.5,0,.6)); puff(ADD, p, 70, { sp0:2, sp1:7, life:[.2,.5], size:[.12,.03], g:PAL.flash.spark, grav:6 }); S.hit(-2); S.shake(.35); S.flash(PAL.flash.light, 4, p); });
+  S.at(2.9, () => { jump(V(0,0,0), 0); S.pose("down"); });
+};
+
+// --- Shiki Fūjin
+FX.reaper = o => {
+  S.pose("forward"); const G = V(0, 3.1, -1.7), pal = PAL.yin;
+  S.task(0, 4.4, (dt,k,lt) => {
+    const a = Math.min(1, lt/1)*(k > .9 ? (1-k)/.1 : 1);
+    for (let i=0;i<emit(500*a,dt);i++){ rdir(_d); const p = V(G.x + _d.x*1.2, G.y + _d.y*2.1, G.z + _d.z*.7);
+      ADD.spawn(p.x,p.y,p.z, rand(-.2,.2), rand(.3,.9), rand(-.2,.2), rand(.6,1.2), rand(.4,.7)*a, .08, i%3 ? pal.outer : pal.core, 0, 0, .6); }
+    if (Math.random() < .6*a) puff(NORM, G.clone().add(V(rand(-1.5,1.5), rand(-2,1), rand(-1,.5))), 2, { r:.4, sp:.3, vel:V(0,.5,0), life:[1.2,2], size:[1,2.8], g:pal.smoke, turb:.6 });
+    [-.36, .36].forEach(x => ADD.spawn(G.x + x, G.y + 1.3, G.z + .62, 0,0,0, .08, .3*a, .2*a, PAL.thread.glint));
+    for (let i=0;i<3;i++){ const s = i%2 ? 1 : -1; ADD.spawn(G.x + s*rand(.5,.8), G.y + 1.9 + rand(0,.5), G.z + .2, 0,0,0, .12, .18*a, .1, pal.core); }
+    S.glow(pal.light, 2.5*a, G);
+  });
+  S.task(1.3, 1.1, (dt,k) => {
+    const st = S.chest(), end = AIM.clone(), tip = st.clone().lerp(end, Math.min(1, k*1.6));
+    for (let i=0;i<Math.round(30*Q);i++){ _t.copy(st).lerp(tip, Math.random()); ADD.spawn(_t.x + rand(-.05,.05), _t.y + Math.sin(_t.z*3)*.06, _t.z, 0,0,0, .12, .2, .05, pal.core); }
+  });
+  S.task(2.3, 1.6, (dt,k) => {
+    const st = AIM.clone(), v = G.clone().sub(st).multiplyScalar(1/1.2);
+    for (let i=0;i<emit(260,dt);i++) ADD.spawn(st.x + rand(-.3,.3), st.y + rand(-.6,.6), st.z + rand(-.2,.2), v.x + rand(-.3,.3), v.y + rand(-.3,.3), v.z, 1.2, .2, .08, PAL.chakra.core, 0, 0, .8);
+    if (Math.random() < dt*4) S.hit(.12);
+  });
+  S.at(4, () => { puff(ADD, G, 300, { r:2, sp0:-4, sp1:-1, radial:true, life:[.3,.5], size:[.4,.05], g:pal.core }); S.flash(pal.light, 6, G); S.shake(.2); });
+};
+
+// --- Jiongu : fils noirs et quatre cœurs
+FX.threads = o => {
+  S.pose("down"); const pal = PAL.thread;
+  const hearts = [["fire",-.3,1.55],["wind",.3,1.55],["lightning",-.3,1.1],["water",.3,1.1]];
+  S.task(0, 4.2, (dt,k,lt) => { hearts.forEach(([el,x,y]) => { const p = caster.localToWorld(V(x, y, -.32)); puff(ADD, p, emit(50,dt)/Q, { r:.06, sp:.25, life:[.2,.4], size:[.22,.05], g:PAL[el].core }); }); });
+  const N = 7;
+  for (let i=0;i<N;i++){
+    const s = V(rand(-.3,.3), rand(.9,1.6), rand(-.2,.1)), ang = i/N*TAU, e = V(Math.cos(ang)*.4, .5 + i*.25, 11 + Math.sin(ang)*.4);
+    const c1 = s.clone().add(V(rand(-3.5,3.5), rand(1,3.5), 2.5)), c2 = e.clone().add(V(rand(-2.5,2.5), rand(1,2.5), -3.5));
+    const bez = u => { const iu = 1-u; return V(
+      iu*iu*iu*s.x + 3*iu*iu*u*c1.x + 3*iu*u*u*c2.x + u*u*u*e.x,
+      iu*iu*iu*s.y + 3*iu*iu*u*c1.y + 3*iu*u*u*c2.y + u*u*u*e.y,
+      iu*iu*iu*s.z + 3*iu*iu*u*c1.z + 3*iu*u*u*c2.z + u*u*u*e.z); };
+    let prevU = 0;
+    S.task(.3 + i*.08, .9, (dt,k,lt) => {
+      const u = easeOut(k), steps = Math.max(2, Math.ceil((u-prevU)*90));
+      for (let j=1;j<=steps;j++){ const p = bez(prevU + (u-prevU)*j/steps), w = Math.sin(lt*14 + i)*.25*(1-u);
+        NORM.spawn(p.x + w, p.y, p.z, 0,0,0, 3.4 - k*.6, .13, .1, pal.core, 0, 0, 0);
+        if (j%4===0) ADD.spawn(p.x + w, p.y, p.z, 0,0,0, .5, .1, .04, pal.glint); }
+      prevU = u;
+      if (k >= 1) S.hit(.2);
+    });
+  }
+  S.task(1.4, 1.6, (dt,k,lt) => {
+    for (let j=0;j<Math.round(20*Q);j++){ const y = rand(.2, 2.3), a = y*7 + lt*2 + Math.floor(Math.random()*3)*TAU/3;
+      NORM.spawn(Math.cos(a)*.32, y, 11 + Math.sin(a)*.32, 0,0,0, 2.4 - k, .1, .09, pal.core); }
+    if (Math.random() < dt*5) S.hit(.08);
+  });
+  S.at(3.6, () => { for (let i=0;i<220*Q;i++){ const p = V(rand(-.5,.5), rand(.3,2.4), rand(2,11)), t = V(0, 1.3, 0);
+    NORM.spawn(p.x,p.y,p.z, (t.x-p.x)/.6, (t.y-p.y)/.6, (t.z-p.z)/.6, .6, .12, .06, pal.core); } });
+};
+
+/* =====================================================================
+   6. BOUCLE DE RENDU
+   ===================================================================== */
+const hud = document.getElementById("hud");
+let last = performance.now(), fpsAcc = 0, fpsN = 0, fps = 60, loopOn = true, idleT = 0, current = 0;
+let framing = null;
+function resize(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  // cadrage de départ : plus large sur écran étroit pour garder lanceur et cible
+  const narrow = w/h < 1.15;
+  if (narrow !== framing){ framing = narrow;
+    if (narrow){ camera.fov = 58; camera.position.set(-17, 9.5, 5.5); controls.target.set(0, -1.6, 5.5); }
+    else { camera.fov = 48; camera.position.set(-14.5, 6.2, 6.5); controls.target.set(0, .2, 5.2); } }
+  renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix();
+  const buf = renderer.getDrawingBufferSize(new THREE.Vector2());
+  const sc = buf.y / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2));
+  ADD.mat.uniforms.uScale.value = sc; NORM.mat.uniforms.uScale.value = sc;
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+const shakeOff = V();
+function frame(now){
+  const realDt = Math.min(.05, (now - last)/1000); last = now;
+  const dt = realDt*S.speed;
+  S.update(dt);
+  ADD.update(dt, S.time); NORM.update(dt, S.time);
+  // bras
+  const arm = caster.userData.armR; arm.rotation.x += (caster.userData.pose - arm.rotation.x)*Math.min(1, realDt*12);
+  // lumière d'effet
+  S.flashI *= Math.exp(-5*dt); S.glowI += (S.glowT - S.glowI)*Math.min(1, dt*14); S.glowT = 0;
+  fxLight.intensity = Math.min(6, Math.max(S.flashI, S.glowI)*.6);
+  // cible (ressort)
+  const du = dummy.userData; du.vel += (-60*du.ang - 7*du.vel)*dt; du.ang += du.vel*dt;
+  du.ang = Math.max(-.6, Math.min(.6, du.ang)); du.inner.rotation.x = -du.ang; dummy.position.y = du.sink;
+  // boucle
+  if (loopOn && S.tasks.length === 0){ idleT += dt; if (idleT > 1.1 && ADD.n + NORM.n < 400){ idleT = 0; play(current); } } else idleT = 0;
+  controls.update();
+  S.shakeA *= Math.exp(-6*realDt);
+  shakeOff.set(rand(-1,1), rand(-1,1), rand(-1,1)).multiplyScalar(S.shakeA*.25);
+  camera.position.add(shakeOff);
+  renderer.render(scene, camera);
+  camera.position.sub(shakeOff);
+  fpsAcc += realDt; fpsN++; if (fpsAcc > .5){ fps = Math.round(fpsN/fpsAcc); fpsAcc = 0; fpsN = 0; }
+  hud.textContent = `${(ADD.n + NORM.n).toLocaleString("fr-FR")} particules · ${fps} i/s`;
+  requestAnimationFrame(frame);
+}
+
+function play(i){
+  const j = JUTSU[i]; S.reset();
+  try { FX[j.fx]({ ...j.o }); } catch (e) { console.error(j.name, e); }
+}
+
+/* =====================================================================
+   7. INTERFACE
+   ===================================================================== */
+const state = { rank:"all", el:"all" };
+const tabsEl = document.getElementById("tabs"), chipsEl = document.getElementById("chips"), listEl = document.getElementById("list");
+const rankVar = r => `var(--rank-${r.toLowerCase()})`;
+function renderFilters(){
+  const count = r => JUTSU.filter(j => (r === "all" || j.rank === r) && (state.el === "all" || j.el === state.el)).length;
+  tabsEl.innerHTML = ["all", ...RANKS].map(r => `<button type="button" class="tab" data-r="${r}" aria-pressed="${state.rank === r}" style="--rank-color:${r === "all" ? "var(--paper)" : rankVar(r)}"><b>${r === "all" ? "Tous" : r}</b><small>${count(r)}</small></button>`).join("");
+  chipsEl.innerHTML = [["all","Tous","全"], ...Object.entries(ELEMENTS).map(([k,v]) => [k, v.label, v.kanji])]
+    .map(([k,l,kj]) => `<button type="button" class="chip" data-e="${k}" aria-pressed="${state.el === k}" style="--el:${k === "all" ? "var(--paper)" : `var(--el-${k})`}"><i>${kj}</i>${l}</button>`).join("");
+}
+function renderList(){
+  const items = JUTSU.map((j,i) => ({ j, i })).filter(({j}) => (state.rank === "all" || j.rank === state.rank) && (state.el === "all" || j.el === state.el));
+  if (!items.length){ listEl.innerHTML = `<li class="empty">Aucune technique pour ce rang et cet élément.</li>`; return; }
+  let html = "", lastRank = "";
+  items.forEach(({j,i}) => {
+    if (j.rank !== lastRank){ lastRank = j.rank; html += `<li class="rank-head">Rang ${j.rank}</li>`; }
+    html += `<li><button type="button" class="item" data-i="${i}" aria-current="${i === current}" style="--el:var(--el-${j.el});--rank-color:${rankVar(j.rank)}">
+      <span class="el-seal">${ELEMENTS[j.el].kanji}</span>
+      <span class="nm"><strong>${j.name}</strong><span>${j.fr}</span></span>
+      <span class="rank ${j.rank}">${j.rank}</span></button></li>`;
+  });
+  listEl.innerHTML = html;
+}
+function select(i, scroll){
+  current = i; const j = JUTSU[i];
+  const card = document.getElementById("card");
+  card.style.setProperty("--el", `var(--el-${j.el})`); card.style.setProperty("--rank-color", rankVar(j.rank));
+  const r = document.getElementById("cRank"); r.textContent = j.rank; r.className = `big-rank ${j.rank}`;
+  document.getElementById("cName").textContent = j.name;
+  document.getElementById("cJp").textContent = `${j.jp} · ${j.fr}`;
+  document.getElementById("cMeta").textContent = `Rang ${j.rank} · ${ELEMENTS[j.el].label} · ${j.type}`;
+  document.getElementById("cDesc").textContent = j.desc;
+  const pal = j.o.pal || { fire:"fire", wind:"wind", lightning:"lightning", water:"water", earth:"earth" }[j.el] || "mixte";
+  document.getElementById("cFx").innerHTML = `Particules : <b>${FX_LABEL[j.fx] || j.fx}</b> · palette ${pal}`;
+  listEl.querySelectorAll(".item").forEach(b => b.setAttribute("aria-current", +b.dataset.i === i));
+  if (scroll){ const b = listEl.querySelector(`.item[data-i="${i}"]`); if (b) b.scrollIntoView({ block:"nearest" }); }
+  try { localStorage.setItem("jutsu.current", String(i)); } catch (e) {}
+  play(i);
+}
+tabsEl.addEventListener("click", e => { const b = e.target.closest(".tab"); if (!b) return; state.rank = b.dataset.r; renderFilters(); renderList(); });
+chipsEl.addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; state.el = b.dataset.e; renderFilters(); renderList(); });
+listEl.addEventListener("click", e => { const b = e.target.closest(".item"); if (b) select(+b.dataset.i); });
+document.getElementById("bPlay").addEventListener("click", () => play(current));
+const bLoop = document.getElementById("bLoop");
+bLoop.addEventListener("click", () => { loopOn = !loopOn; bLoop.setAttribute("aria-pressed", loopOn); });
+document.getElementById("speed").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  S.speed = +b.dataset.s; document.querySelectorAll("#speed button").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+function visibleIdx(){ return [...listEl.querySelectorAll(".item")].map(b => +b.dataset.i); }
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input, textarea")) return;
+  if (e.code === "Space"){ e.preventDefault(); play(current); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); const v = visibleIdx(); if (!v.length) return;
+    let p = v.indexOf(current); p = p < 0 ? 0 : (p + (e.key === "ArrowDown" ? 1 : -1) + v.length) % v.length; select(v[p], true); }
+});
+
+let start = 0;
+try { const s = +localStorage.getItem("jutsu.current"); if (s >= 0 && s < JUTSU.length) start = s; } catch (e) {}
+renderFilters(); renderList(); select(start, true);
+requestAnimationFrame(frame);
+window.__jutsu = { JUTSU, play, select, S, ADD, NORM };
+</script>
+</body>
+</html>
