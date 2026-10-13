@@ -16,11 +16,34 @@ Kakuzu mesure 1,85 m. Les monstres sont à l'échelle réelle : 1 unité = 1 mè
 ## Contenu
 
 ```
-HQ/        version haute qualité (cinématique, Unreal Engine 5, Unity HDRP)
-LOW/       version jeu, < 20 000 triangles par modèle (Roblox, GMod, mobile)
+gmod/      ★ ADDON GARRY'S MOD : sources des modèles (QC/SMD), textures VTF/VMT,
+           PNJ NextBot, techniques, arme de Kakuzu, compile_all.bat, LISEZMOI.txt
+GMOD/      version Garry's Mod (cel-shading façon Storm 4) en .glb/.fbx/.blend
+apercu/    vidéo d'aperçu + visionneuse 3D hors ligne (un seul fichier HTML)
+HQ/        version haute qualité réaliste (cinématique, Unreal Engine 5, Unity HDRP)
+LOW/       version jeu réaliste, < 20 000 triangles par modèle (Roblox, mobile)
 renders/   rendus Cycles des modèles HQ
-sources/   scripts Python/Blender qui génèrent les modèles (modifiables)
+sources/   scripts Python/Blender qui génèrent tout (modifiables)
 ```
+
+## Garry's Mod (version recommandée pour ton serveur)
+
+Tout est expliqué dans `gmod/LISEZMOI.txt`. En résumé :
+1. Double-clique `gmod/compile_all.bat` sur ton PC Windows. Il utilise le `studiomdl.exe` fourni avec Garry's Mod.
+2. Copie `gmod/addon/kakuzu_jiongu` dans `garrysmod/addons/`, sur ton PC et sur le serveur.
+3. En jeu, ouvre le menu Q :
+   - l'onglet PNJ contient les 4 monstres ;
+   - l'onglet Armes contient « Jiongu (Kakuzu) », pour invoquer et commander les monstres.
+
+**Style, inspiré des jeux Naruto Storm (CyberConnect2)**
+- ombrage en 3 tons (`$lightwarptexture`) avec des ombres bleutées ;
+- contour d'encre (« inverted hull ») et rim light ;
+- touffes de fils pointues modélisées en géométrie ;
+- masque qui se fissure (skin 1) quand le cœur est presque épuisé.
+
+**Avant de mettre en production**
+- Ce dossier ne contient pas de `.mdl` compilé, car studiomdl n'existe que sous Windows : la compilation se fait chez toi.
+- Le code Lua a été vérifié (syntaxe et relecture) mais n'a pas encore tourné dans Garry's Mod. Teste-le sur un serveur local avant de le mettre en production.
 
 Chaque monstre existe en trois formats :
 - `.glb` : glTF 2.0 avec textures, squelette et animations intégrés. C'est le plus simple, il s'ouvre partout.

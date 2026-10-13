@@ -1,0 +1,14 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "models/kakuzu_jiongu/jiongu_clump"
+	"$bumpmap" "models/kakuzu_jiongu/jiongu_flat_n"
+	"$phong" "1"
+	"$phongexponent" "6"
+	"$phongboost" "0.08"
+	"$phongfresnelranges" "[0.2 0.5 1]"
+	"$rimlight" "1"
+	"$rimlightexponent" "3"
+	"$rimlightboost" "2.0"
+	"$surfaceprop" "flesh"
+	"$lightwarptexture" "models/kakuzu_jiongu/jiongu_lightwarp"
+}

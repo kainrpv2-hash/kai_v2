@@ -49,7 +49,7 @@ def build_mask(sp, c, R, scale, lod):
     kind = sp.mask["kind"]
     res = dict(rings=26, segs=80) if lod == "hq" else dict(rings=12, segs=40)
     spec = mk.MASK[kind]
-    mat = kb.mat_mask(f"KZ_Mask_{kind}", f"mask_{kind}_col.jpg", f"mask_{kind}_nrm.png")
+    mat = kb.mat_mask(f"KZ_Mask_{kind}", f"mask_{kind}_col.jpg", None if lod == "gmod" else f"mask_{kind}_nrm.png")
     parts = [kb.mask_mesh(f"mask_{kind}", spec["outline"], spec["relief"], spec["M"], **res)]
     if "plate" in spec:
         pl = spec["plate"]
@@ -73,7 +73,7 @@ def build_mask(sp, c, R, scale, lod):
 
 
 # ------------------------------------------------------------------ extras
-def ladder_wing(sp, e):
+def ladder_wing(sp, e, lod="hq"):
     """Thin thread wing like a ladder: two rails + rungs + spiky tips (Futon)."""
     s = e["s"]
     root, mid, tip = e["root"], e["mid"], e["tip"]
@@ -95,7 +95,8 @@ def ladder_wing(sp, e):
             pts.append(tuple(curve(t) + w * k * half * (1 - 0.35 * t) + rng.normal(0, 0.012, 3)))
         ext = np.array(pts[-1]) + (np.array(pts[-1]) - np.array(pts[-2])) * 1.4 + w * k * 0.05
         pts.append(tuple(ext))
-        objs.append(kb.tendril(f"rail_{s}_{k}", pts, radius=0.024, taper=True))
+        objs.append(kb.tendril(f"rail_{s}_{k}", pts, radius=0.024, taper=True,
+                               res=6 if lod != "gmod" else 3, bevel_res=1 if lod != "gmod" else 0))
     n = 15
     for i in range(1, n):
         t = i / n
@@ -103,25 +104,30 @@ def ladder_wing(sp, e):
         b = curve(t) + w * half * (1 - 0.35 * t)
         mid_r = (a + b) / 2 + rng.normal(0, 0.01, 3)
         objs.append(kb.tendril(f"rung_{s}_{i}", [tuple(a - w * 0.03), tuple(mid_r), tuple(b + w * 0.03)],
-                               radius=0.014, taper=False, res=3))
+                               radius=0.014, taper=False, res=3 if lod != "gmod" else 1, bevel_res=1 if lod != "gmod" else 0))
     for j in range(4):  # ragged spikes near the tip, like the frayed ends in the anime
         t = 0.75 + 0.07 * j
         base = curve(t) + w * rng.choice([-1, 1]) * half * 0.7
         tipp = base + (d * 0.25 + w * rng.normal(0, 0.15) + np.array([0, 0, 0.08])) * rng.uniform(0.6, 1.0)
-        objs.append(kb.tendril(f"spike_{s}_{j}", [tuple(base), tuple((base + tipp) / 2), tuple(tipp)], radius=0.016))
+        objs.append(kb.tendril(f"spike_{s}_{j}", [tuple(base), tuple((base + tipp) / 2), tuple(tipp)], radius=0.016,
+                               res=6 if lod != "gmod" else 2, bevel_res=1 if lod != "gmod" else 0))
     return objs
 
 
 # ------------------------------------------------------------------ fur
-def build_fur(sp, body_ob, bone_names, c, R, scale, lod):
+def build_fur(sp, body_ob, bone_names, c, R, scale, lod, kind="cards"):
     v, t, n = kb.mesh_arrays(body_ob)
     a, b2, cc = v[t[:, 0]], v[t[:, 1]], v[t[:, 2]]
     area = 0.5 * np.linalg.norm(np.cross(b2 - a, cc - a), axis=1).sum()
     F = sp.fur
-    dens = F["density"] * (1.5 if lod == "hq" else 0.25)
-    count = int(area * dens)
-    log(f"body area {area:.1f} m2 -> {count} fur cards")
-    rng = np.random.default_rng(hash(sp.key) % 2 ** 32)
+    if kind == "clumps":          # Storm-style geometric thread clumps (GMod variant)
+        count = int(np.clip(area * 21, 300, 480))
+    elif kind == "fringe":        # a few frayed fibres on top of the clumps (GMod variant)
+        count = int(area * F["density"] * 0.055)
+    else:
+        count = int(area * F["density"] * (1.5 if lod == "hq" else 0.25))
+    log(f"body area {area:.1f} m2 -> {count} {kind}")
+    rng = np.random.default_rng((hash(sp.key) + len(kind)) % 2 ** 32)
 
     hand_idx = [i for i, bn in enumerate(bone_names) if bn.startswith(("hand", "foot"))]
     limb_idx = [i for i, bn in enumerate(bone_names) if bn.startswith(("upperarm", "forearm", "thigh", "shin"))]
@@ -187,13 +193,27 @@ def build_fur(sp, body_ob, bone_names, c, R, scale, lod):
         out = np.where(flow_w > 0, out * (1 - 0.6 * flow_w), out)
         Wd = np.clip(L * rng.uniform(0.3, 0.45, k), 0.05, 0.17) * (0.78 if lod == "hq" else 1.25)
         col = np.where(rng.random(k) < 0.22, rng.integers(6, 8, k), rng.integers(0, 6, k))
+        if kind == "fringe":
+            col = rng.integers(6, 8, k)
+            Wd = Wd * 0.7
+        if kind == "clumps":  # shorter, spikier tufts so arms and claws stay readable (anime silhouette)
+            L = np.where(limb, L * 0.95, L * 0.74)
+            droop = droop * 0.55
+            out = out + 0.1
         return dict(length=L, width=Wd, outward=np.clip(out, 0.05, 0.95), droop=droop,
-                    twist=rng.uniform(-0.8, 0.8, k), col=col, flow=fl, flow_w=fw)
+                    twist=rng.uniform(-0.8, 0.8, k), col=col, flow=fl, flow_w=fw,
+                    radius=np.clip(L * rng.uniform(0.13, 0.19, k), 0.03, 0.07), flat=rng.uniform(0.55, 1.0, k))
 
-    V, Fc, UV, NR, _ = kb.fur_cards(P, N, style, rng)
+    if kind == "clumps":
+        S = style(P, N, rng)
+        V, Fc, UV, NR = kb.clumps(P, N, S)
+        mat = kb.mat_clump()
+    else:
+        V, Fc, UV, NR, _ = kb.fur_cards(P, N, style, rng)
+        mat = kb.mat_fur(normal=(lod != "gmod"))
     V[:, 2] = np.maximum(V[:, 2], 0.006)
-    fur = kb.obj_from_arrays(f"{sp.key}_fur", V, Fc, uvs=UV, normals=NR)
-    fur.data.materials.append(kb.mat_fur())
+    fur = kb.obj_from_arrays(f"{sp.key}_{kind}", V, Fc, uvs=UV, normals=NR)
+    fur.data.materials.append(mat)
     per = len(V) // len(P)
     return fur, np.repeat(W, per, axis=0)
 
@@ -362,7 +382,7 @@ def make_actions(arm, sp):
 # ------------------------------------------------------------------ main
 def build(key, lod="hq"):
     sp = ALL[key]()
-    kb.TEX = os.path.join(HERE, "tex" if lod == "hq" else "tex_low")
+    kb.TEX = os.path.join(HERE, {"hq": "tex", "low": "tex_low", "gmod": "tex_gmod"}[lod])
     kb.reset()
     os.makedirs(OUT, exist_ok=True)
     voxel = 0.016 if lod == "hq" else 0.03
@@ -386,19 +406,25 @@ def build(key, lod="hq"):
     kb.apply_modifiers(body)
     body.data.shade_smooth()
     kb.box_uv(body, 1 / 0.7)
-    body.data.materials.append(kb.mat_body())
+    body.data.materials.append(kb.mat_body(normal=(lod != "gmod")))
     log(f"body: {len(body.data.polygons)} faces")
 
     names = [b[0] for b in sp.bones if b[0] != "root"]
     c, R, scale = mask_frame(sp)
     mask_parts = build_mask(sp, c, R, scale, lod)
-    fur, Wfur = build_fur(sp, body, names, c, R, scale, lod)
-    log(f"fur: {len(fur.data.polygons)} quads")
+    if lod == "gmod":
+        fur, Wfur = build_fur(sp, body, names, c, R, scale, lod, kind="fringe")
+        clump, Wcl = build_fur(sp, body, names, c, R, scale, lod, kind="clumps")
+        log(f"fringe: {len(fur.data.polygons)} quads, clumps: {len(clump.data.polygons)} tris")
+    else:
+        fur, Wfur = build_fur(sp, body, names, c, R, scale, lod)
+        clump = None
+        log(f"fur: {len(fur.data.polygons)} quads")
 
     extras = []
     for kind, e in sp.extras:
         if kind == "ladder":
-            objs = ladder_wing(sp, e)
+            objs = ladder_wing(sp, e, lod)
             for o in objs:
                 kb.box_uv(o, 1 / 0.7)
                 o.data.materials.append(bpy.data.materials["KZ_Threads_Body"])
@@ -407,10 +433,15 @@ def build(key, lod="hq"):
 
     set_groups(body, names, sp.body.bone_weights(verts_of(body), names, tau=0.05))
     set_groups(fur, names, Wfur)
+    if clump is not None:
+        set_groups(clump, names, Wcl)
     for p in mask_parts:
         set_groups(p, names, rigid(len(p.data.vertices), names, "head"))
 
-    ob = kb.join([body, fur] + mask_parts + extras, f"Jiongu_{key.capitalize()}")
+    ob = kb.join([body, fur] + ([clump] if clump is not None else []) + mask_parts + extras, f"Jiongu_{key.capitalize()}")
+    if lod == "gmod":  # ink outline (inverted hull) like the Storm games' per-part outlines
+        kb.outline_hull(ob, [("KZ_Threads_Body", 0.014), ("KZ_Threads_Clump", 0.009),
+                             (f"KZ_Mask_{sp.mask['kind']}", 0.005)], kb.mat_outline())
     for o in list(bpy.data.objects):
         if o.type == "CURVE":
             bpy.data.objects.remove(o)

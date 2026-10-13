@@ -1,0 +1,6 @@
+{
+	"title": "Kakuzu - Jiongu (les quatre coeurs)",
+	"type": "npc",
+	"tags": ["fun", "roleplay"],
+	"ignore": ["*.psd", "*.txt", "*.md"]
+}

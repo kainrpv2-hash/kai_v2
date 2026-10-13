@@ -1,0 +1,93 @@
+KAKUZU - JIONGU (les quatre coeurs) pour Garry's Mod
+=====================================================
+
+Fan-art non commercial. Naruto (c) Masashi Kishimoto / Shueisha / Studio Pierrot.
+
+Contenu
+-------
+  compile_all.bat            Compile les 4 modeles (double-clic, Windows)
+  modelsrc\jiongu_*\         Sources des modeles : .qc + .smd (maillage, animations, physique)
+  addon\kakuzu_jiongu\       L'addon Garry's Mod complet :
+      lua\                   PNJ NextBot, techniques, arme "Jiongu (Kakuzu)"
+      materials\             Textures VTF + materiaux VMT (cel-shading facon Storm 4)
+      models\                (rempli par compile_all.bat)
+
+
+ETAPE 1 - Compiler les modeles (une seule fois, sur ton PC Windows)
+--------------------------------------------------------------------
+Garry's Mod contient deja le compilateur (bin\studiomdl.exe). Rien a installer.
+
+  1. Double-clique sur compile_all.bat.
+  2. Si Garry's Mod n'est pas dans le dossier Steam par defaut, ouvre compile_all.bat
+     avec le Bloc-notes et corrige la ligne :
+        set "GMOD=C:\Program Files (x86)\Steam\steamapps\common\GarrysMod"
+  3. A la fin, les fichiers .mdl/.vvd/.vtx/.phy sont copies dans
+        addon\kakuzu_jiongu\models\kakuzu_jiongu\
+
+Alternative : Crowbar (outil gratuit). Onglet "Compile", choisis le .qc, jeu "Garry's Mod",
+coche "Output to : Subfolder", puis copie le dossier models\kakuzu_jiongu dans l'addon.
+
+
+ETAPE 2 - Installer l'addon
+---------------------------
+  - Jeu solo / test : copie addon\kakuzu_jiongu dans
+        ...\GarrysMod\garrysmod\addons\
+  - Serveur : copie le meme dossier dans garrysmod\addons\ du serveur.
+    Les joueurs doivent aussi recevoir les modeles et textures :
+      * soit tu publies l'addon sur le Workshop (gmad + gmpublish) et tu ajoutes
+        resource.AddWorkshop("<ID>") dans lua\autorun\jiongu_init.lua,
+      * soit tu utilises ton FastDL habituel (dossiers models\ et materials\).
+
+
+ETAPE 3 - En jeu
+----------------
+  Menu Q > onglet PNJ > "Naruto - Kakuzu (Jiongu)" :
+      Masque du Feu (Katon)      boule de feu qui explose en tempete de flammes
+      Masque du Vent (Futon)     souffle d'air comprime en cone, projette les cibles
+      Masque de la Foudre (Raiton) trois lances d'eclairs
+      Masque de l'Eau (Suiton)   bulle d'eau sous pression (eteint le feu)
+    Poses depuis le menu, ils attaquent les joueurs et PNJ proches
+    (sauf si jiongu_hostile 0).
+
+  Menu Q > onglet Armes > "Naruto - Kakuzu (Jiongu)" > Jiongu (Kakuzu) :
+      Clic gauche  fait sortir le coeur suivant (Feu > Vent > Foudre > Eau) la ou tu vises
+      Clic droit   tes monstres attaquent ce que tu vises (ou y vont si tu vises le sol)
+      R            les monstres rentrent dans ton corps
+    Les monstres invoques n'attaquent personne d'eux-memes : ils suivent Kakuzu,
+    obeissent a ses ordres et attaquent quiconque le blesse.
+
+Commandes console (admin / serveur)
+-----------------------------------
+  jiongu_hostile 1|0        les monstres poses par le menu attaquent les joueurs ou non
+  jiongu_damage_scale 1     multiplicateur des degats des techniques
+  jiongu_model_scale 1      taille (1 = anime ; 0.75 pour passer dans les batiments)
+
+Fiches techniques
+-----------------
+  Modele          Triangles*  Sommets  Os   Sequences
+  jiongu_katon    28 110      22 128   15   idle (ACT_IDLE), walk (ACT_WALK), run (ACT_RUN),
+  jiongu_futon    26 358      21 310   21   attack (ACT_RANGE_ATTACK1),
+  jiongu_raiton   33 032      25 124   17   attack_melee (ACT_MELEE_ATTACK1)
+  jiongu_suiton   22 698      17 194   15
+  * contour d'encre inclus (environ 45 % des triangles).
+  Skins : 0 = masque intact, 1 = masque fissure (le PNJ passe en skin 1 sous 35 % de vie).
+  Point d'attache "mouth" au centre du masque (depart des techniques).
+  Echelle : 1 unite = 1 pouce. Hauteurs : Feu 3,1 m (123 u), Vent 2,9 m ailes comprises (112 u),
+  Foudre 3,6 m crete comprise (140 u), Eau 2,9 m (115 u). Un joueur fait 72 u.
+
+Style
+-----
+  Inspire du rendu des jeux Naruto Storm (CyberConnect2) : ombrage en 3 tons
+  ($lightwarptexture), ombres bleutees, contour d'encre par "inverted hull",
+  rim light, touffes de fils pointues en geometrie + quelques fibres effilochees.
+
+Probleme ?
+----------
+  - Modele en damier violet/noir : les textures ne sont pas trouvees -> verifie que
+    materials\models\kakuzu_jiongu\ est bien dans l'addon.
+  - ERROR (modele rouge) : le .mdl n'est pas compile ou pas copie dans models\kakuzu_jiongu\.
+  - Erreur de compilation : envoie-moi le texte affiche par compile_all.bat.
+  - Le monstre glisse sans marcher : verifie que le .mdl compile contient bien la
+    sequence "walk" (ouvre-le dans HLMV / le visualiseur de modeles de GMod).
+  - Monstre tourne de 90 degres : signale-le-moi (studiomdl applique une rotation
+    par defaut que les fichiers .smd prennent deja en compte).

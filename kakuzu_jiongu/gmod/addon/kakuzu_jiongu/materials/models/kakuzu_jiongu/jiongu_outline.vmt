@@ -1,0 +1,6 @@
+"UnlitGeneric"
+{
+	"$basetexture" "models/kakuzu_jiongu/jiongu_outline"
+	"$color" "[0 0 0]"
+	"$surfaceprop" "flesh"
+}

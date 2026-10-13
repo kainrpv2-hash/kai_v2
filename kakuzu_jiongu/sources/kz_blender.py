@@ -150,18 +150,19 @@ def _normal(nt, im, b, strength=1.0):
     nt.links.new(nm.outputs["Normal"], b.inputs["Normal"])
 
 
-def mat_body():
+def mat_body(normal=True):
     m, nt, b = _mat("KZ_Threads_Body")
     t = _tex(nt, image("body_col.png"), -700, 200)
     nt.links.new(t.outputs["Color"], b.inputs["Base Color"])
-    _normal(nt, image("body_nrm.png", True), b, 1.0)
+    if normal:
+        _normal(nt, image("body_nrm.png", True), b, 1.0)
     b.inputs["Roughness"].default_value = 0.82
     b.inputs["Specular IOR Level"].default_value = 0.15
     m.use_backface_culling = True
     return m
 
 
-def mat_fur():
+def mat_fur(normal=True):
     m, nt, b = _mat("KZ_Threads_Fur")
     t = _tex(nt, image("fur_atlas_col.png"), -700, 200)
     t.image.alpha_mode = "STRAIGHT"
@@ -172,7 +173,8 @@ def mat_fur():
     r.location = (-300, 0)
     nt.links.new(t.outputs["Alpha"], r.inputs[0])
     nt.links.new(r.outputs[0], b.inputs["Alpha"])
-    _normal(nt, image("fur_atlas_nrm.png", True), b, 0.8)
+    if normal:
+        _normal(nt, image("fur_atlas_nrm.png", True), b, 0.8)
     b.inputs["Roughness"].default_value = 0.5
     b.inputs["Specular IOR Level"].default_value = 0.4
     m.use_backface_culling = False
@@ -189,6 +191,123 @@ def mat_mask(name, col_img, nrm_img=None, rough=0.42):
     b.inputs["Specular IOR Level"].default_value = 0.5
     m.use_backface_culling = True
     return m
+
+
+def mat_clump():
+    m, nt, b = _mat("KZ_Threads_Clump")
+    t = _tex(nt, image("clump_col.png"), -700, 200)
+    nt.links.new(t.outputs["Color"], b.inputs["Base Color"])
+    b.inputs["Roughness"].default_value = 0.75
+    b.inputs["Specular IOR Level"].default_value = 0.25
+    m.use_backface_culling = True
+    return m
+
+
+def mat_outline():
+    """Ink outline for the inverted hull: black, back-face culled (only the rim behind the silhouette shows)."""
+    m, nt, b = _mat("KZ_Outline")
+    b.inputs["Base Color"].default_value = (0.002, 0.002, 0.003, 1)
+    b.inputs["Roughness"].default_value = 1.0
+    b.inputs["Specular IOR Level"].default_value = 0.0
+    m.use_backface_culling = True
+    return m
+
+
+def clumps(P, N, S, sides=5):
+    """Storm-style thread clumps: tapered tubes (base ring, bent mid ring, sharp tip).
+    S: dict of per-clump arrays length, radius, outward, droop, flow, flow_w. Returns V, F(tris), loop UVs, vertex normals."""
+    n = len(P)
+    g = np.array([0, 0, -1.0])
+    tg = g - N * (N @ g)[:, None]
+    bad = np.linalg.norm(tg, axis=1) < 0.15
+    rng = np.random.default_rng(3)
+    rnd = _norm(np.cross(N, _norm(rng.normal(size=(n, 3)))))
+    tg = np.where(bad[:, None], rnd, _norm(tg))
+    if "flow" in S:
+        fw = S["flow_w"][:, None]
+        tg = _norm(tg * (1 - fw) + S["flow"] * fw)
+    out = S["outward"][:, None]
+    d0 = _norm(N * out + tg * (1 - out) + rng.normal(scale=0.12, size=N.shape))
+    L, R0 = S["length"][:, None], S["radius"][:, None]
+    base = P - N * 0.035
+    p1 = base + d0 * L * 0.45
+    d1 = _norm(d0 + g * S["droop"][:, None] * 0.7)
+    tip = p1 + d1 * L * 0.6
+    up = np.where(np.abs(d0[:, 2:3]) > 0.9, np.array([[1.0, 0, 0]]), np.array([[0, 0, 1.0]]))
+    a0 = _norm(np.cross(d0, up))
+    b0 = _norm(np.cross(d0, a0))
+    a1 = _norm(a0 - d1 * (a0 * d1).sum(1, keepdims=True))
+    b1 = _norm(np.cross(d1, a1))
+    flat = S.get("flat", np.ones(n))[:, None]
+    cols = sides + 1
+    nv = 2 * cols + 1
+    V = np.zeros((n, nv, 3))
+    NR = np.zeros((n, nv, 3))
+    UV = np.zeros((n, nv, 2))
+    for j in range(cols):
+        th = 2 * np.pi * j / sides
+        c, s_ = np.cos(th), np.sin(th)
+        r0 = a0 * c * flat + b0 * s_
+        r1 = a1 * c * flat + b1 * s_
+        V[:, j] = base + r0 * R0
+        V[:, cols + j] = p1 + r1 * R0 * 0.62
+        NR[:, j] = _norm(_norm(r0) * 0.55 + N * 0.45)
+        NR[:, cols + j] = _norm(_norm(r1) * 0.6 + N * 0.25 + d1 * 0.15)
+        UV[:, j] = (j / sides, 0.0)
+        UV[:, cols + j] = (j / sides, 0.45)
+    V[:, -1] = tip
+    NR[:, -1] = _norm(d1 + N * 0.3)
+    UV[:, -1] = (0.5, 1.0)
+    tris = []
+    for j in range(sides):
+        a, b = j, j + 1
+        tris += [[a, b, cols + b], [a, cols + b, cols + a], [cols + a, cols + b, 2 * cols]]
+    tris = np.array(tris)
+    F = (tris[None] + (np.arange(n) * nv)[:, None, None]).reshape(-1, 3)
+    V, NR, UVf = V.reshape(-1, 3), NR.reshape(-1, 3), UV.reshape(-1, 2)
+    # make the winding face outwards (check on the first quad of the first clump)
+    f0 = F[0]
+    fn = np.cross(V[f0[1]] - V[f0[0]], V[f0[2]] - V[f0[0]])
+    if fn @ (V[f0[0]] - base[0]) < 0:
+        F = F[:, ::-1]
+    return V, F, UVf[F.ravel()], NR
+
+
+def outline_hull(ob, mat_names_thickness, outline_mat):
+    """Inverted-hull ink outline: duplicate the listed material parts, push along vertex normals, flip, assign ink.
+    Vertex groups (skin weights) are carried over so the outline deforms with the body."""
+    import bmesh
+    me = ob.data
+    names = [m.name for m in me.materials]
+    me.materials.append(outline_mat)
+    oi = len(me.materials) - 1
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.verts.ensure_lookup_table()
+    for mname, thick in mat_names_thickness:
+        if mname not in names:
+            continue
+        mi = names.index(mname)
+        faces = [f for f in bm.faces if f.material_index == mi]
+        if not faces:
+            continue
+        geom = set(faces)
+        for f in faces:
+            geom.update(f.verts)
+            geom.update(f.edges)
+        res = bmesh.ops.duplicate(bm, geom=list(geom))
+        nverts = [e for e in res["geom"] if isinstance(e, bmesh.types.BMVert)]
+        nfaces = [e for e in res["geom"] if isinstance(e, bmesh.types.BMFace)]
+        bm.normal_update()
+        for v in nverts:
+            v.co = v.co + v.normal * thick
+        bmesh.ops.reverse_faces(bm, faces=nfaces)
+        for f in nfaces:
+            f.material_index = oi
+            f.smooth = True
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
 
 
 def mat_flat(name, rgb, rough=0.6, emit=None, strength=0.0):
@@ -364,11 +483,11 @@ def horn(name, base, direction, length, r0, bend=(0, 0, 0.0), segs=10, ring=12):
 
 
 # ------------------------------------------------------------------ thread tendrils
-def tendril(name, pts, radius=0.012, taper=True, res=6):
+def tendril(name, pts, radius=0.012, taper=True, res=6, bevel_res=1):
     cu = bpy.data.curves.new(name, "CURVE")
     cu.dimensions = "3D"
     cu.bevel_depth = radius
-    cu.bevel_resolution = 1
+    cu.bevel_resolution = bevel_res
     cu.resolution_u = res
     cu.use_fill_caps = True
     sp = cu.splines.new("BEZIER")
