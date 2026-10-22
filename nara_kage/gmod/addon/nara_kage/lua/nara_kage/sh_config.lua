@@ -26,10 +26,10 @@ NARA.Config = {
 	-- ------------------------------------------------------------ forme de l'ombre
 	Width          = 5,     -- demi-largeur de la bande (la bande fait 10 u de large)
 	TipLength      = 55,    -- longueur de la pointe effilee
-	PoolLength     = 36,    -- demi-longueur de la flaque sous le lanceur (vers l'avant)
-	PoolWidth      = 22,    -- demi-largeur de cette flaque
-	PoolForward    = 10,    -- la flaque est decalee vers l'avant du lanceur
-	TargetPool     = 24,    -- rayon de la flaque sous la cible prise
+	PoolLength     = 22,    -- demi-longueur de la flaque sous le lanceur (vers l'avant)
+	PoolWidth      = 14,    -- demi-largeur de cette flaque
+	PoolForward    = 6,     -- la flaque est decalee vers l'avant du lanceur
+	TargetPool     = 16,    -- rayon de la flaque sous la cible prise
 
 	-- ------------------------------------------------------------ camera dans la pointe
 	CamHeight      = 14,    -- hauteur de l'oeil au-dessus du sol
