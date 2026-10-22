@@ -1,0 +1,1509 @@
+<title>Kagemane no Jutsu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Mise en page : la scene 3D occupe tout l'ecran, le HUD flotte par-dessus comme dans le jeu.
+   Un seul monde visuel (encre sur scene ensoleillee) : pas de theme clair/sombre. */
+:root {
+  --ink: #0e0d0b;
+  --ink-soft: rgba(14, 13, 11, .72);
+  --paper: #f1eadb;
+  --paper-dim: #b9b1a1;
+  --moss: #8c9a5b;
+  --ember: #e0553c;
+  --display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--ink); color: var(--paper); font-family: var(--body); overflow: hidden; touch-action: none;
+  -webkit-user-select: none; user-select: none; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; transition: filter .25s linear; }
+#veil { position: fixed; inset: -2%; pointer-events: none; background: var(--ink); opacity: 0;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+
+.hud { position: fixed; pointer-events: none; z-index: 2; }
+.hud * { pointer-events: auto; }
+
+/* rouleau des techniques */
+#scroll { top: calc(env(safe-area-inset-top, 0px) + 14px); left: max(16px, env(safe-area-inset-left, 0px));
+  display: grid; gap: 6px; width: min(300px, calc(100vw - 32px)); padding: 12px; border-radius: 4px;
+  background: rgba(14,13,11,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+#scroll h1 { margin: 0 0 4px; font: 800 1.35rem/1.1 var(--display); letter-spacing: .02em; text-wrap: balance;
+  text-shadow: 0 1px 10px rgba(0,0,0,.6); }
+#scroll h1 small { display: block; font: 500 .68rem/1.4 var(--body); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--paper-dim); }
+.tech { display: grid; grid-template-columns: 2.1rem 1fr auto; align-items: center; gap: 10px; text-align: left;
+  border: 0; border-radius: 3px; padding: 8px 10px; background: rgba(241,234,219,.06); color: var(--paper);
+  font: inherit; cursor: pointer; transition: background .15s, transform .15s; }
+.tech:hover { background: rgba(241,234,219,.12); }
+.tech:focus-visible, .btn:focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
+.tech .kan { font: 800 1.45rem/1 var(--display); color: var(--paper-dim); text-align: center; }
+.tech .nm { font-weight: 700; font-size: .86rem; line-height: 1.25; }
+.tech .nm span { display: block; font-weight: 400; font-size: .74rem; color: var(--paper-dim); }
+.tech .key { font: 500 .7rem var(--body); color: var(--paper-dim); border: 1px solid rgba(241,234,219,.25);
+  border-radius: 3px; padding: 1px 6px; font-variant-numeric: tabular-nums; }
+.tech[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+.tech[aria-pressed="true"] .kan, .tech[aria-pressed="true"] .nm span { color: #4a4436; }
+.tech[aria-pressed="true"] .key { color: #4a4436; border-color: rgba(14,13,11,.3); }
+#desc { margin: 2px 0 0; font-size: .76rem; line-height: 1.5; color: var(--paper-dim); text-shadow: 0 1px 6px rgba(0,0,0,.8);
+  max-width: 34ch; }
+
+/* actions */
+#actions { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.btn { border: 0; border-radius: 3px; cursor: pointer; font: 700 .9rem var(--body); letter-spacing: .06em;
+  padding: 12px 18px; background: var(--paper); color: var(--ink); min-width: 9.5rem; text-align: center; }
+.btn.ghost { background: var(--ink-soft); color: var(--paper); }
+.btn[disabled] { opacity: .45; cursor: default; }
+#boost { display: none; }
+#sound { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: max(16px, env(safe-area-inset-right, 0px));
+  min-width: 0; padding: 8px 12px; font-size: .75rem; }
+
+/* compteur : panneau trace au pinceau, en bas au milieu */
+#count { left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 4vh); transform: translateX(-50%);
+  display: grid; justify-items: center; gap: 2px; padding: 20px 64px 18px; opacity: 0; transition: opacity .25s;
+  pointer-events: none; }
+#count::before { content: ""; position: absolute; inset: -30px -26px -26px; z-index: -1; background: var(--ink); opacity: .86;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+#count .lbl { font: 500 .66rem var(--body); letter-spacing: .2em; text-transform: uppercase; color: var(--paper-dim);
+  white-space: nowrap; }
+#count .num { font: 800 clamp(3rem, 9vw, 4.6rem)/1 var(--display); font-variant-numeric: tabular-nums;
+  min-width: 2ch; text-align: center; transform-origin: 50% 60%; }
+#count .bar { width: min(240px, 52vw); height: 4px; background: rgba(241,234,219,.16); margin-top: 6px; }
+#count .bar i { display: block; height: 100%; width: 100%; background: var(--paper); transform-origin: left; }
+#count .hint { margin-top: 8px; font-size: .7rem; color: var(--paper-dim); text-align: center; max-width: 52ch;
+  line-height: 1.5; }
+#count.urgent .num, #count.urgent .bar i { color: var(--ember); background-color: var(--ember); }
+#count.urgent .num { background: none; }
+
+/* bandeau d'aide */
+#tip { left: 50%; top: calc(env(safe-area-inset-top, 0px) + 16px); transform: translateX(-50%);
+  font-size: .76rem; color: var(--paper); background: var(--ink-soft); padding: 7px 14px; border-radius: 3px;
+  white-space: nowrap; transition: opacity .3s; pointer-events: none; }
+#target { right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 56px);
+  width: 190px; font-size: .72rem; color: var(--paper); display: grid; gap: 8px; pointer-events: none;
+  padding: 10px 12px; border-radius: 4px; background: rgba(14,13,11,.55); }
+#target .row { display: grid; gap: 3px; }
+#target .hp { height: 4px; background: rgba(241,234,219,.16); }
+#target .hp i { display: block; height: 100%; background: var(--ember); transition: width .2s; }
+
+/* joystick tactile */
+#stick { left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  width: 112px; height: 112px; border-radius: 50%; background: rgba(14,13,11,.4); border: 1px solid rgba(241,234,219,.2);
+  display: none; touch-action: none; }
+#stick i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
+  background: rgba(241,234,219,.75); }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; font: 600 1rem var(--display); z-index: 5;
+  background: var(--ink); color: var(--paper-dim); letter-spacing: .1em; }
+
+@media (pointer: coarse) {
+  #stick, #boost { display: block; }
+  .tech .key { display: none; }
+}
+@media (max-width: 640px) {
+  #scroll { right: max(16px, env(safe-area-inset-right, 0px)); width: auto; padding: 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  #scroll h1, #desc, .tech .key, .tech .nm span { display: none; }
+  .tech { grid-template-columns: 1fr; justify-items: center; gap: 2px; padding: 6px 4px; text-align: center; }
+  .tech .kan { font-size: 1.2rem; }
+  .tech .nm { font-size: .68rem; }
+  #sound { top: calc(env(safe-area-inset-top, 0px) + 84px); }
+  #target { top: calc(env(safe-area-inset-top, 0px) + 84px); right: auto; left: max(16px, env(safe-area-inset-left, 0px));
+    width: 150px; padding: 8px 10px; }
+  #tip { display: none; }
+  .btn { min-width: 7.5rem; padding: 11px 14px; font-size: .82rem; }
+  #count { padding: 14px 40px 14px; bottom: calc(env(safe-area-inset-bottom, 0px) + 196px); }
+  #count .hint { display: none; }
+}
+body.immersed #scroll, body.immersed #target, body.immersed #sound { opacity: 0; pointer-events: none; }
+#scroll, #target, #sound { transition: opacity .3s; }
+@media (prefers-reduced-motion: reduce) { #stage canvas, #count, #tip { transition: none; } }
+</style>
+
+<div id="stage"></div>
+<div id="veil"></div>
+<div id="loading">影 · chargement</div>
+
+<div class="hud" id="scroll">
+  <h1>Hiden : les ombres <small>Clan Nara · preview de l'addon GMod</small></h1>
+  <button class="tech" data-t="0" aria-pressed="true"><span class="kan">影</span><span class="nm">Kagemane no Jutsu<span>Manipulation des ombres</span></span><span class="key">1</span></button>
+  <button class="tech" data-t="1" aria-pressed="false"><span class="kan">縛</span><span class="nm">Kage Kubishibari<span>Étreinte de l'ombre</span></span><span class="key">2</span></button>
+  <button class="tech" data-t="2" aria-pressed="false"><span class="kan">縫</span><span class="nm">Kage Nui<span>Couture des ombres</span></span><span class="key">3</span></button>
+  <p id="desc"></p>
+</div>
+
+<button class="btn ghost hud" id="sound" aria-pressed="false">Son : coupé</button>
+
+<div class="hud" id="actions">
+  <button class="btn ghost" id="boost">Accélérer</button>
+  <button class="btn ghost" id="cancel" disabled>Annuler</button>
+  <button class="btn" id="cast">Lancer</button>
+</div>
+
+<div class="hud" id="stick"><i></i></div>
+<div class="hud" id="tip">Glisse pour tourner la caméra · ZQSD pour marcher · Espace pour lancer</div>
+<div class="hud" id="target"></div>
+
+<div class="hud" id="count" aria-live="polite">
+  <div class="lbl" id="countLbl">Kagemane no Jutsu</div>
+  <div class="num" id="countNum">13</div>
+  <div class="bar"><i id="countBar"></i></div>
+  <div class="hint" id="countHint"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>window.THREE || document.write('<script src="vendor/three.min.js"><\/script>');</script>
+<script src="textures.js"></script>
+<script src="sounds.js"></script>
+<script>
+"use strict";
+// =====================================================================================
+//  Reglages : identiques a lua/nara_kage/sh_config.lua (unites Source, 1 u = 1 pouce)
+// =====================================================================================
+const C = {
+  WindupTime: 1.15, CamDiveTime: 0.45, SteerTime: 13, ShadowSpeed: 250, BoostSpeed: 430, SlowSpeed: 90,
+  TurnRate: 170, MaxLength: 3000, CatchRadius: 26, PossessTime: 10, KneelLeg: "R",
+  CamHeight: 11, CamBack: 6, CamFOV: 100, CamPitchMin: -55, CamPitchMax: 35,
+  ChokeTendrils: 5, ChokeClimbTime: 1.3, ChokeTime: 6, ChokeDPS: 9, ChokeRange: 1100,
+  NuiRange: 1300, NuiNeedles: 11, NuiDamage: 40, NuiHoldTime: 1.6,
+  TravelSpeed: 1100, RetractSpeed: 1800, Width: 15, PoolRadius: 34, TargetPool: 30, Cooldown: 1.2,
+};
+const PH = { NONE: 0, WINDUP: 1, STEER: 2, TRAVEL: 3, BOUND: 4, CHOKE: 5, PIERCE: 6, RETRACT: 7 };
+const TECHS = [
+  { name: "Kagemane no Jutsu", desc: "Un genou à terre, le sceau du Rat. L'ombre part, la caméra plonge dans sa pointe : 13 secondes pour la diriger vers une cible. Prise, la cible imite tes mouvements." },
+  { name: "Kage Kubishibari", desc: "L'ombre file vers la cible visée, ou part de celle déjà prise. Des mains d'ombre grimpent le long du corps jusqu'au cou et serrent." },
+  { name: "Kage Nui", desc: "Des aiguilles d'ombre jaillissent du sol et transpercent la cible, qui reste clouée sur place." },
+];
+
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a, b) => Math.min(Math.max(x, a), b);
+const ease = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+const easeOut = (x) => { x = clamp(x, 0, 1); return 1 - Math.pow(1 - x, 3); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const rad = (d) => d * Math.PI / 180;
+const angDiff = (a, b) => { let d = (a - b) % 360; if (d > 180) d -= 360; if (d < -180) d += 360; return d; };
+const rand = (a, b) => a + Math.random() * (b - a);
+
+// --- vecteurs en coordonnees Source (x avant, y gauche, z haut) -----------------------
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const add = (a, b) => V(a.x + b.x, a.y + b.y, a.z + b.z);
+const sub = (a, b) => V(a.x - b.x, a.y - b.y, a.z - b.z);
+const mul = (a, s) => V(a.x * s, a.y * s, a.z * s);
+const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+const crs = (a, b) => V(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+const len = (a) => Math.sqrt(dot(a, a));
+const nrm = (a) => { const l = len(a); return l > 1e-9 ? mul(a, 1 / l) : V(); };
+const lerpV = (a, b, t) => V(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
+const dist = (a, b) => len(sub(a, b));
+const dist2D = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const fwd = (yaw, pitch = 0) => V(Math.cos(rad(pitch)) * Math.cos(rad(yaw)), Math.cos(rad(pitch)) * Math.sin(rad(yaw)), -Math.sin(rad(pitch)));
+const yawOf = (v) => Math.atan2(v.y, v.x) * 180 / Math.PI;
+const UP = V(0, 0, 1);
+const S2T = (v) => new THREE.Vector3(v.x, v.z, -v.y);   // Source -> three.js
+
+// =====================================================================================
+//  Rendu de base
+// =====================================================================================
+const stage = $("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.02;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xc9d6dc);
+scene.fog = new THREE.Fog(0xc9d6dc, 1600, 5200);
+const camera = new THREE.PerspectiveCamera(60, 1, 1, 12000);
+const world = new THREE.Group();
+world.rotation.x = -Math.PI / 2;     // le monde est ecrit en coordonnees Source (z en haut)
+scene.add(world);
+
+function texFrom(name, repeatS) {
+  const t = new THREE.TextureLoader().load(window.NARA_TEX[name]);
+  t.encoding = THREE.LinearEncoding;
+  t.anisotropy = 4;
+  if (repeatS) { t.wrapS = THREE.RepeatWrapping; }
+  return t;
+}
+const TEX = {
+  ribbon: texFrom("shadow_ribbon", true), pool: texFrom("shadow_pool"), ring: texFrom("shadow_ring"),
+  wisp: texFrom("shadow_wisp"), strand: texFrom("shadow_strand"), needle: texFrom("shadow_needle"),
+  hand: texFrom("shadow_hand"),
+};
+TEX.strand.wrapT = THREE.RepeatWrapping;
+$("veil").style.webkitMaskImage = $("veil").style.maskImage = `url(${window.NARA_TEX.shadow_vignette})`;
+{
+  const st = document.createElement("style");
+  st.textContent = `#count::before { -webkit-mask-image: url(${window.NARA_TEX.shadow_ribbon}); mask-image: url(${window.NARA_TEX.shadow_ribbon}); }`;
+  document.head.appendChild(st);
+}
+
+// --- lumiere : fin d'apres-midi, soleil bas qui allonge les ombres ---------------------
+const hemi = new THREE.HemisphereLight(0xdde8f0, 0x6f5d3f, 0.62);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe3bf, 1.55);
+sun.position.copy(V(-900, 700, 1100));
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -1300; sun.shadow.camera.right = 1300;
+sun.shadow.camera.top = 1300; sun.shadow.camera.bottom = -1300;
+sun.shadow.camera.near = 100; sun.shadow.camera.far = 4000;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.6;
+world.add(sun);
+world.add(sun.target);
+
+// --- terrain d'entrainement ------------------------------------------------------------
+function noiseCanvas(size, paint) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  paint(c.getContext("2d"), size);
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = 8;
+  return t;
+}
+function speckle(g, s, cols, n, rmin, rmax) {
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = cols[i % cols.length];
+    g.globalAlpha = rand(0.08, 0.35);
+    g.beginPath(); g.arc(rand(0, s), rand(0, s), rand(rmin, rmax), 0, 7); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+const grassTex = noiseCanvas(512, (g, s) => {
+  g.fillStyle = "#7d8f4f"; g.fillRect(0, 0, s, s);
+  speckle(g, s, ["#6a7c3f", "#93a35d", "#5c6d36", "#a3ad6a"], 2600, 2, 9);
+  g.strokeStyle = "#55652f"; g.globalAlpha = .35;
+  for (let i = 0; i < 1600; i++) { const x = rand(0, s), y = rand(0, s); g.beginPath(); g.moveTo(x, y); g.lineTo(x + rand(-2, 2), y - rand(3, 7)); g.stroke(); }
+  g.globalAlpha = 1;
+});
+grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+grassTex.repeat.set(26, 26);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshLambertMaterial({ map: grassTex }));
+ground.receiveShadow = true;
+world.add(ground);
+
+const dirtTex = noiseCanvas(1024, (g, s) => {
+  const r = s / 2;
+  const grd = g.createRadialGradient(r, r, r * 0.2, r, r, r);
+  grd.addColorStop(0, "rgba(196,170,124,1)"); grd.addColorStop(0.78, "rgba(186,160,116,1)"); grd.addColorStop(1, "rgba(186,160,116,0)");
+  g.fillStyle = grd; g.fillRect(0, 0, s, s);
+  g.globalCompositeOperation = "source-atop";
+  speckle(g, s, ["#a88d63", "#cdb88f", "#9a7f57", "#d8c59e"], 5200, 1.5, 7);
+  g.strokeStyle = "#8f7652"; g.globalAlpha = .18; g.lineWidth = 2;
+  for (let i = 0; i < 60; i++) { g.beginPath(); const y = rand(0, s); g.moveTo(0, y); g.bezierCurveTo(s * .3, y + rand(-40, 40), s * .6, y + rand(-40, 40), s, y + rand(-30, 30)); g.stroke(); }
+});
+const dirt = new THREE.Mesh(new THREE.PlaneGeometry(2600, 2600), new THREE.MeshLambertMaterial({ map: dirtTex, transparent: true }));
+dirt.position.z = 0.15;
+dirt.receiveShadow = true;
+world.add(dirt);
+
+const OBST = [];   // obstacles ronds (l'ombre glisse autour)
+const matWood = new THREE.MeshLambertMaterial({ color: 0x8a6440 });
+const matBark = new THREE.MeshLambertMaterial({ color: 0x5b4330 });
+const matLeaf = [0x4d6b34, 0x5d7c3c, 0x3f5a2c].map((c) => new THREE.MeshLambertMaterial({ color: c }));
+const matRope = new THREE.MeshLambertMaterial({ color: 0xd7c9a2 });
+const matRock = new THREE.MeshLambertMaterial({ color: 0x8b8a83 });
+function cyl(r1, r2, h, mat, seg = 12) {
+  const g = new THREE.CylinderGeometry(r1, r2, h, seg);
+  g.rotateX(Math.PI / 2);
+  const m = new THREE.Mesh(g, mat);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function post(x, y) {
+  const p = cyl(7, 7.5, 62, matWood); p.position.set(x, y, 31); world.add(p);
+  for (const z of [22, 42]) { const r = cyl(7.8, 7.8, 3.5, matRope); r.position.set(x, y, z); world.add(r); }
+  OBST.push({ x, y, r: 8 });
+}
+post(330, 190); post(-240, 330); post(120, -380); post(-420, -160);
+function tree(x, y, s) {
+  const t = cyl(9 * s, 13 * s, 190 * s, matBark, 8); t.position.set(x, y, 95 * s); world.add(t);
+  for (let i = 0; i < 4; i++) {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(60, 90) * s, 0), matLeaf[i % 3]);
+    b.position.set(x + rand(-40, 40) * s, y + rand(-40, 40) * s, (170 + rand(0, 110)) * s);
+    b.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
+    b.castShadow = true; world.add(b);
+  }
+  OBST.push({ x, y, r: 13 * s + 2 });
+}
+for (let i = 0; i < 26; i++) {
+  const a = (i / 26) * Math.PI * 2 + rand(-.1, .1);
+  const d = rand(1350, 2100);
+  tree(Math.cos(a) * d, Math.sin(a) * d, rand(1.0, 1.6));
+}
+for (let i = 0; i < 9; i++) {
+  const a = rand(0, 7), d = rand(650, 1150), r = rand(14, 30);
+  const k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), matRock);
+  k.position.set(Math.cos(a) * d, Math.sin(a) * d, r * .45);
+  k.scale.set(1, rand(.7, 1.2), .7);
+  k.castShadow = k.receiveShadow = true;
+  world.add(k);
+  OBST.push({ x: k.position.x, y: k.position.y, r: r * 0.9 });
+}
+
+// =====================================================================================
+//  Personnages : squelette ValveBiped (memes os et proportions qu'un joueur GMod)
+// =====================================================================================
+const BONES = [["Pelvis", null, 0, 0, 38], ["Spine", "Pelvis", 0, 0, 41], ["Spine1", "Spine", 0, 0, 46], ["Spine2", "Spine1", 0, 0, 51],
+  ["Spine4", "Spine2", 0, 0, 57], ["Neck1", "Spine4", 0, 0, 62], ["Head1", "Neck1", 0, 0, 65]];
+for (const s of ["R", "L"]) {
+  const y = s === "R" ? -1 : 1;
+  const add = (n, par, x, yy, z) => BONES.push([s + "_" + n, par ? s + "_" + par : "Pelvis", x, yy * y, z]);
+  add("Thigh", null, 0, 4, 37); add("Calf", "Thigh", 0, 4, 20); add("Foot", "Calf", 0, 4, 4); add("Toe0", "Foot", 5, 4, 1);
+  BONES.push([s + "_Clavicle", "Spine4", 0, 2 * y, 58]);
+  add("UpperArm", "Clavicle", 0, 7, 57); add("Forearm", "UpperArm", 0, 8, 45); add("Hand", "Forearm", 0, 8.5, 34);
+  const fx = [1.2, 0.8, 0, -0.8, -1.5];
+  for (let f = 0; f < 5; f++) {
+    const x = fx[f], z0 = f === 0 ? 33 : 30.5;
+    add("Finger" + f, "Hand", x, 8.5, z0);
+    add("Finger" + f + "1", "Finger" + f, x + (f === 0 ? .6 : 0), 8.5, z0 - 1.7);
+    add("Finger" + f + "2", "Finger" + f + "1", x + (f === 0 ? 1 : 0), 8.5, z0 - 3);
+  }
+}
+const BID = {}; BONES.forEach((b, i) => BID[b[0]] = i);
+const PARENT = BONES.map((b) => b[1] ? BID[b[1]] : -1);
+const KIDS = BONES.map(() => []); PARENT.forEach((p, i) => { if (p >= 0) KIDS[p].push(i); });
+const REST = BONES.map((b) => V(b[2], b[3], b[4]));
+const SUB = BONES.map((_, i) => { const out = []; const st = [i]; while (st.length) { const b = st.pop(); out.push(b); st.push(...KIDS[b]); } return out; });
+
+function capsuleGeo(r1, r2, L, seg = 12) {
+  const pts = [];
+  for (let i = 0; i <= 6; i++) { const a = -Math.PI / 2 + (i / 6) * Math.PI / 2; pts.push(new THREE.Vector2(Math.max(.001, r1 * Math.cos(a)), r1 * Math.sin(a))); }
+  for (let i = 0; i <= 6; i++) { const a = (i / 6) * Math.PI / 2; pts.push(new THREE.Vector2(Math.max(.001, r2 * Math.cos(a)), L + r2 * Math.sin(a))); }
+  return new THREE.LatheGeometry(pts, seg);
+}
+// place une geometrie (axe Y local) entre deux points de la pose de repos
+function between(geo, a, b) {
+  const d = sub(b, a);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm(d));
+  geo.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(q));
+  geo.translate(a.x, a.y, a.z);
+  return geo;
+}
+
+class Ninja {
+  constructor(look) {
+    this.look = look;
+    this.pos = V(); this.yaw = 0; this.parts = [];
+    this.mats = BONES.map(() => new THREE.Matrix4());
+    this.invRest = REST.map((p) => new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z));
+    this.walk = 0; this.walkAmt = 0; this.breath = rand(0, 6); this.fall = 0;
+    this.wKneel = 0; this.wArms = 0; this.hp = 100;
+    this.build();
+  }
+  part(bone, geo, color, opts = {}) {
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color }));
+    m.matrixAutoUpdate = false; m.castShadow = true; m.receiveShadow = !opts.noRecv;
+    world.add(m);
+    this.parts.push({ m, b: BID[bone] });
+  }
+  limb(bone, a, b, r1, r2, color) { this.part(bone, between(capsuleGeo(r1, r2, dist(REST[BID[a]], REST[BID[b]])), REST[BID[a]], REST[BID[b]]), color); }
+  build() {
+    const L = this.look;
+    const ell = (bone, c, sx, sy, sz, color, seg = 16) => { const g = new THREE.SphereGeometry(1, seg, 12); g.scale(sx, sy, sz); g.translate(c.x, c.y, c.z); this.part(bone, g, color); };
+    ell("Pelvis", V(0, 0, 37.5), 6.6, 7.8, 5.4, L.pants);
+    this.limb("Spine", "Spine", "Spine1", 6.2, 6.4, L.shirt);
+    ell("Spine2", V(0.2, 0, 51), 6.3, 8.6, 8.8, L.vest);
+    ell("Spine4", V(0, 0, 57.4), 4.4, 7.6, 3.4, L.vest);
+    // col de la veste et poches
+    const collar = new THREE.TorusGeometry(3.4, 1.3, 8, 16); collar.translate(0, 0, 60.6); this.part("Spine4", collar, L.vest);
+    for (const y of [-3.2, 3.2]) { const p = new THREE.BoxGeometry(1.6, 3.2, 3.8); p.translate(5.8, y, 49); this.part("Spine2", p, L.vestDark); }
+    this.limb("Neck1", "Neck1", "Head1", 2.1, 2.1, L.skin);
+    const head = new THREE.SphereGeometry(4.4, 20, 16); head.scale(1.05, .95, 1.08); head.translate(0.4, 0, 67.6); this.part("Head1", head, L.skin);
+    // yeux (donnent la direction du regard)
+    for (const y of [-1.55, 1.55]) { const e = new THREE.BoxGeometry(.5, 1.3, .55); e.translate(4.55, y, 68.1); this.part("Head1", e, 0x1a1a1a); }
+    L.hair(this);
+    for (const s of ["R", "L"]) {
+      this.limb(s + "_UpperArm", s + "_UpperArm", s + "_Forearm", 2.35, 2.05, L.shirt);
+      this.limb(s + "_Forearm", s + "_Forearm", s + "_Hand", 1.95, 1.6, L.arm);
+      const palm = new THREE.BoxGeometry(3.3, 1.35, 4.2); palm.translate(-0.15, (s === "R" ? -1 : 1) * 8.5, 32.3); this.part(s + "_Hand", palm, L.skin);
+      for (let f = 0; f < 5; f++) {
+        const n = s + "_Finger" + f;
+        const r = f === 0 ? .62 : .5;
+        this.limb(n, n, n + "1", r, r, L.skin);
+        this.limb(n + "1", n + "1", n + "2", r, r * .95, L.skin);
+        const a = REST[BID[n + "1"]], b = REST[BID[n + "2"]];
+        const tip = add(b, mul(nrm(sub(b, a)), 1.1));
+        this.part(n + "2", between(capsuleGeo(r * .95, r * .8, 1.1), b, tip), L.skin);
+      }
+      this.limb(s + "_Thigh", s + "_Thigh", s + "_Calf", 3.7, 2.9, L.pants);
+      this.limb(s + "_Calf", s + "_Calf", s + "_Foot", 2.7, 2.0, L.pants);
+      const wrap = new THREE.CylinderGeometry(2.45, 2.45, 4.2, 12); wrap.rotateX(Math.PI / 2);
+      wrap.translate(0, (s === "R" ? -1 : 1) * 4, 7.4); this.part(s + "_Calf", wrap, 0xddd6c6);
+      const sole = new THREE.BoxGeometry(9.2, 3.6, 2.6); sole.translate(2.4, (s === "R" ? -1 : 1) * 4, 2.0); this.part(s + "_Foot", sole, L.feet);
+    }
+    if (L.band) {   // bandeau frontal de Konoha porte au bras, comme Shikamaru
+      const band = new THREE.CylinderGeometry(2.55, 2.55, 3.2, 14); band.rotateX(Math.PI / 2); band.translate(0, 7.6, 52); this.part("L_UpperArm", band, 0x2d3a5c);
+      const plate = new THREE.BoxGeometry(2.6, .5, 2.4); plate.translate(0, 10.15, 52); this.part("L_UpperArm", plate, 0xb9bec4);
+    }
+  }
+
+  // ---- matrices : pose de repos puis animation procedurale -------------------------
+  root() {
+    const m = new THREE.Matrix4().makeRotationZ(rad(this.yaw));
+    if (this.fall > 0) m.premultiply(new THREE.Matrix4().makeRotationAxis(nrm(crs(UP, fwd(this.yaw))), -rad(84) * ease(this.fall)));
+    m.setPosition(this.pos.x, this.pos.y, this.pos.z);
+    return m;
+  }
+  P(b) { const e = this.mats[b].elements; return V(e[12], e[13], e[14]); }
+  rotAxis(b, axis, ang, pivot) {
+    if (Math.abs(ang) < 1e-7) return;
+    const R = new THREE.Matrix4().makeRotationAxis(nrm(axis), ang);
+    this.rotM(b, R, pivot);
+  }
+  rotM(b, R, pivot) {
+    const rp = pivot.clone().applyMatrix4(R);
+    const D = R.clone().setPosition(pivot.x - rp.x, pivot.y - rp.y, pivot.z - rp.z);
+    for (const k of SUB[b]) this.mats[k].premultiply(D);
+  }
+  rotBetween(b, from, to, pivot, w = 1) {
+    from = nrm(from); to = nrm(to);
+    const ax = crs(from, to), s = len(ax), c = clamp(dot(from, to), -1, 1);
+    if (s < 1e-6) return;
+    this.rotAxis(b, mul(ax, 1 / s), Math.atan2(s, c) * w, pivot);
+  }
+  aim(b, child, dir, w = 1) { const p = this.P(b); this.rotBetween(b, sub(this.P(child), p), dir, p, w); }
+  twoBone(a, b, c, target, pole, w) {
+    const A = this.P(a), B = this.P(b), Cc = this.P(c);
+    const L1 = dist(A, B), L2 = dist(B, Cc);
+    const T = lerpV(Cc, target, w);
+    const toT = sub(T, A);
+    const d = clamp(len(toT), Math.abs(L1 - L2) + .05, (L1 + L2) * .999);
+    const dir = nrm(toT);
+    let cur = sub(sub(B, A), mul(dir, dot(sub(B, A), dir)));
+    let pl = sub(pole, mul(dir, dot(pole, dir)));
+    if (len(cur) > 1e-3) { cur = nrm(cur); pl = len(pl) > 1e-3 ? nrm(lerpV(cur, nrm(pl), w)) : cur; }
+    if (len(pl) < 1e-3) return;
+    pl = nrm(pl);
+    const aa = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
+    const h = Math.sqrt(Math.max(0, L1 * L1 - aa * aa));
+    const knee = add(add(A, mul(dir, aa)), mul(pl, h));
+    this.rotBetween(a, sub(B, A), sub(knee, A), A);
+    const B2 = this.P(b), C2 = this.P(c);
+    this.rotBetween(b, sub(C2, B2), sub(add(A, mul(dir, d)), B2), B2);
+  }
+  curl(ids, palm, angs, w) {
+    let seg = null;
+    for (let i = 0; i < 3; i++) {
+      const p = this.P(ids[i]);
+      if (i < 2) seg = sub(this.P(ids[i + 1]), p);
+      const ax = crs(seg, palm);
+      if (len(ax) > 1e-4) this.rotAxis(ids[i], ax, rad(angs[i]) * w, p);
+    }
+  }
+
+  pose(t) {
+    const R = this.root();
+    for (let i = 0; i < BONES.length; i++) this.mats[i].makeTranslation(REST[i].x, REST[i].y, REST[i].z).premultiply(R);
+    const F = fwd(this.yaw), Rt = crs(F, UP), b = BID;
+    // --- marche / respiration (base, avant la cinematique inverse)
+    const w = this.walkAmt, ph = this.walk;
+    const br = Math.sin(t * 1.7 + this.breath);
+    this.rotAxis(b.Spine, Rt, rad(1.2 * br), this.P(b.Spine));
+    for (const s of ["R", "L"]) {
+      const side = s === "R" ? 1 : -1;
+      const sw = Math.sin(ph + (s === "R" ? 0 : Math.PI));
+      // jambes
+      this.rotAxis(b[s + "_Thigh"], Rt, -rad(28) * sw * w, this.P(b[s + "_Thigh"]));
+      const knee = Math.max(0, -Math.cos(ph + (s === "R" ? 0 : Math.PI))) * 42 * w + 4;
+      this.rotAxis(b[s + "_Calf"], Rt, rad(knee), this.P(b[s + "_Calf"]));
+      // bras : un peu ecartes du corps, balancement oppose aux jambes
+      this.rotAxis(b[s + "_UpperArm"], F, rad(9) * side, this.P(b[s + "_UpperArm"]));
+      this.rotAxis(b[s + "_UpperArm"], Rt, rad(24) * sw * w, this.P(b[s + "_UpperArm"]));
+      this.rotAxis(b[s + "_Forearm"], Rt, -rad(12 + 20 * w), this.P(b[s + "_Forearm"]));
+      for (let f = 1; f < 5; f++) {
+        const palm = mul(Rt, side);
+        this.curl([b[s + "_Finger" + f], b[s + "_Finger" + f + "1"], b[s + "_Finger" + f + "2"]], mul(palm, -1), [18, 22, 14], 1);
+      }
+    }
+    if (w > 0.01) {
+      const bob = Math.abs(Math.sin(ph)) * 1.4 * w;
+      for (const k of SUB[b.Pelvis]) this.mats[k].premultiply(new THREE.Matrix4().makeTranslation(0, 0, bob - 0.7 * w));
+    }
+    this.ik();
+    for (const p of this.parts) {
+      p.m.matrix.multiplyMatrices(this.mats[p.b], this.invRest[p.b]);
+      p.m.matrixWorldNeedsUpdate = true;
+    }
+  }
+
+  // ---- genou a terre + sceau du Rat : portage direct de cl_pose.lua ----------------
+  ik() {
+    const wk = this.wKneel, wa = this.wArms, b = BID;
+    const O = this.pos, F = fwd(this.yaw), U = UP, Rt = crs(F, U);
+    if (wk > 0.001) {
+      const K = C.KneelLeg === "L" ? "L" : "R", P = K === "R" ? "L" : "R", kSide = K === "R" ? 1 : -1;
+      const hipK = this.P(b[K + "_Thigh"]);
+      const L1 = dist(hipK, this.P(b[K + "_Calf"])), L2 = dist(this.P(b[K + "_Calf"]), this.P(b[K + "_Foot"]));
+      const ankleH = Math.max(2, this.P(b[P + "_Foot"]).z - O.z);
+      const footDir = sub(this.P(b[P + "_Toe0"]), this.P(b[P + "_Foot"]));
+      const drop = Math.max(0, (hipK.z - O.z) - (L1 * .96 + 2.5));
+      const off = add(mul(U, -drop * wk), mul(F, -2 * wk));
+      const D = new THREE.Matrix4().makeTranslation(off.x, off.y, off.z);
+      for (const k of SUB[b.Pelvis]) this.mats[k].premultiply(D);
+      const lean = nrm(crs(U, F));
+      this.rotAxis(b.Spine, lean, rad(11) * wk, this.P(b.Spine));
+      this.rotAxis(b.Head1, lean, rad(9) * wk, this.P(b.Head1));
+      const hip = this.P(b[K + "_Thigh"]);
+      const kneeT = add(add(V(hip.x, hip.y, O.z + 2.5), mul(F, 2)), mul(Rt, kSide * 1.5));
+      const ankleT = add(add(sub(kneeT, mul(F, L2 * .96)), mul(U, 3.5)), mul(Rt, kSide * 2));
+      this.twoBone(b[K + "_Thigh"], b[K + "_Calf"], b[K + "_Foot"], ankleT, sub(kneeT, hip), wk);
+      this.aim(b[K + "_Foot"], b[K + "_Toe0"], add(mul(U, -.75), mul(F, -.66)), wk);
+      const hipP = this.P(b[P + "_Thigh"]);
+      const L1p = dist(hipP, this.P(b[P + "_Calf"]));
+      const footT = sub(add(V(hipP.x, hipP.y, O.z + ankleH), mul(F, L1p * .82)), mul(Rt, kSide * 2.5));
+      this.twoBone(b[P + "_Thigh"], b[P + "_Calf"], b[P + "_Foot"], footT, add(F, mul(U, .7)), wk);
+      this.aim(b[P + "_Foot"], b[P + "_Toe0"], footDir, wk);
+    }
+    if (wa > 0.001) {
+      const neck = this.P(b.Neck1);
+      const up = nrm(sub(neck, this.P(b.Spine)));
+      const fw = nrm(sub(F, mul(up, dot(F, up))));
+      const rt = crs(fw, up);
+      const H = add(sub(neck, mul(up, 6.5)), mul(fw, 13));
+      const fingersDir = nrm(add(mul(up, .93), mul(fw, .36)));
+      for (const s of ["R", "L"]) {
+        const side = s === "R" ? 1 : -1;
+        const wrist = add(sub(add(H, mul(rt, side * 1.7)), mul(up, 4.2)), mul(fw, side * .7));
+        const pole = sub(sub(mul(rt, side), mul(up, .9)), mul(fw, .15));
+        this.twoBone(b[s + "_UpperArm"], b[s + "_Forearm"], b[s + "_Hand"], wrist, pole, wa);
+        const hp = this.P(b[s + "_Hand"]), mid = this.P(b[s + "_Finger2"]);
+        const idx = this.P(b[s + "_Finger1"]), pky = this.P(b[s + "_Finger4"]);
+        const f = nrm(sub(mid, hp));
+        const across = sub(idx, pky);
+        let palm = side > 0 ? mul(crs(f, across), -1) : crs(f, across);
+        palm = nrm(sub(palm, mul(f, dot(palm, f))));
+        let palmT = mul(rt, -side);
+        palmT = nrm(sub(palmT, mul(fingersDir, dot(palmT, fingersDir))));
+        const Bc = new THREE.Matrix4().makeBasis(f, palm, crs(f, palm));
+        const Bd = new THREE.Matrix4().makeBasis(fingersDir, palmT, crs(fingersDir, palmT));
+        const Rm = Bd.multiply(Bc.transpose());
+        const q = new THREE.Quaternion().setFromRotationMatrix(Rm);
+        const qw = new THREE.Quaternion().slerp(q, wa);
+        this.rotM(b[s + "_Hand"], new THREE.Matrix4().makeRotationFromQuaternion(qw), hp);
+        const palmNow = nrm(lerpV(palm, palmT, wa));
+        for (const fi of [1, 2]) {
+          const ids = [b[s + "_Finger" + fi], b[s + "_Finger" + fi + "1"], b[s + "_Finger" + fi + "2"]];
+          this.aim(ids[0], ids[1], fingersDir, wa); this.aim(ids[1], ids[2], fingersDir, wa);
+        }
+        this.curl([b[s + "_Finger3"], b[s + "_Finger31"], b[s + "_Finger32"]], palmNow, [78, 88, 60], wa);
+        this.curl([b[s + "_Finger4"], b[s + "_Finger41"], b[s + "_Finger42"]], palmNow, [82, 88, 60], wa);
+        this.curl([b[s + "_Finger0"], b[s + "_Finger01"], b[s + "_Finger02"]], palmNow, [30, 35, 25], wa);
+      }
+    }
+  }
+  neck() { return this.P(BID.Neck1); }
+  bone(n) { return this.P(BID[n]); }
+  center() { return add(this.pos, V(0, 0, 36)); }
+}
+
+const spiky = (cols, spec) => (n) => {
+  const cap = new THREE.SphereGeometry(4.75, 18, 12, 0, Math.PI * 2, 0, Math.PI * .55);
+  cap.rotateX(Math.PI / 2); cap.rotateY(-0.35); cap.translate(-.1, 0, 68.3);
+  n.part("Head1", cap, cols);
+  for (const [x, y, z, dx, dz, r, h] of spec) {
+    const g = new THREE.ConeGeometry(r, h, 6);
+    g.translate(0, h / 2, 0);
+    g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm(V(dx, 0, dz)))));
+    g.translate(x, y, z);
+    n.part("Head1", g, cols, { flat: true });
+  }
+};
+const LOOKS = {
+  nara: { skin: 0xe6bf9b, shirt: 0x2f3138, arm: 0x2f3138, vest: 0x5b6a3b, vestDark: 0x4a5730, pants: 0x2b303e, feet: 0x1f2433, band: true,
+    // la queue de cheval en ananas de Shikamaru
+    hair: spiky(0x1d1b20, [[-3.0, 0, 71.2, -.55, 1, 2.6, 6.5], [-3.6, -1.1, 71.4, -.75, .85, 1.7, 6.2], [-3.6, 1.1, 71.4, -.75, .85, 1.7, 6.2],
+      [-3.2, 0, 72.5, -.2, 1, 1.6, 6.8], [-4.2, 0, 70.4, -1, .5, 1.6, 5.5]]) },
+  rogue: { skin: 0xd9b08a, shirt: 0x37303f, arm: 0x37303f, vest: 0x60656c, vestDark: 0x4c5056, pants: 0x2a2730, feet: 0x1b1a20, band: false,
+    hair: spiky(0x9a9eab, [[-1, -2.5, 71.5, -.6, .8, 1.8, 6], [-1.5, 2.3, 71.8, -.7, .8, 1.8, 6], [0.5, 0, 72.6, .2, 1, 2, 5.5],
+      [-3, 0, 71, -1, .4, 2, 6], [1.5, -2, 71.6, .4, .9, 1.4, 4.5], [1.5, 2, 71.6, .4, .9, 1.4, 4.5]]) },
+};
+
+const hero = new Ninja(LOOKS.nara);
+hero.yaw = 30;
+const enemies = [new Ninja(LOOKS.rogue), new Ninja(LOOKS.rogue)];
+enemies[0].pos = V(620, 240, 0); enemies[1].pos = V(-380, 560, 0);
+enemies.forEach((e, i) => { e.name = i === 0 ? "Ninja déserteur" : "Ninja déserteur (2)"; e.goal = null; e.wait = rand(0, 2); e.yaw = 200; });
+
+// =====================================================================================
+//  Effets d'ombre (memes regles que cl_fx.lua)
+// =====================================================================================
+function inkMat(map, opts = {}) {
+  const { order, ...rest } = opts;
+  return new THREE.MeshBasicMaterial({ map, color: 0x000000, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, ...rest });
+}
+class Strip {   // geometrie dynamique : bandes au sol, faisceaux, quads
+  constructor(map, maxV, opts) {
+    this.pos = new Float32Array(maxV * 3); this.uv = new Float32Array(maxV * 2);
+    this.idx = new Uint32Array(maxV * 3);
+    this.geo = new THREE.BufferGeometry();
+    this.geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.geo.setAttribute("uv", new THREE.BufferAttribute(this.uv, 2).setUsage(THREE.DynamicDrawUsage));
+    this.geo.setIndex(new THREE.BufferAttribute(this.idx, 1).setUsage(THREE.DynamicDrawUsage));
+    this.mesh = new THREE.Mesh(this.geo, inkMat(map, opts));
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = opts && opts.order || 2;
+    world.add(this.mesh);
+    this.max = maxV; this.reset();
+  }
+  reset() { this.nv = 0; this.ni = 0; }
+  v(p, u, w) { if (this.nv >= this.max) return -1; const i = this.nv++; this.pos.set([p.x, p.y, p.z], i * 3); this.uv.set([u, w], i * 2); return i; }
+  tri(a, b, c) { if (a < 0 || b < 0 || c < 0 || this.ni + 3 > this.idx.length) return; this.idx[this.ni++] = a; this.idx[this.ni++] = b; this.idx[this.ni++] = c; }
+  quad(a, b, c, d) { this.tri(a, b, c); this.tri(a, c, d); }
+  flush() {
+    this.geo.attributes.position.needsUpdate = true; this.geo.attributes.uv.needsUpdate = true; this.geo.index.needsUpdate = true;
+    this.geo.setDrawRange(0, this.ni);
+  }
+}
+const ribbonFringe = new Strip(TEX.ribbon, 4000, { opacity: 70 / 255, order: 2 });
+const ribbonCore = new Strip(TEX.ribbon, 4000, { opacity: 242 / 255, order: 3 });
+const poolStrip = new Strip(TEX.pool, 400, { order: 1 });
+const poolSoft = new Strip(TEX.pool, 400, { opacity: 0.36, order: 1 });
+const ringStrip = new Strip(TEX.ring, 40, { order: 1 });
+const strandStrip = new Strip(TEX.strand, 4000, { opacity: 0.96, order: 4, polygonOffset: false });
+const needleStrip = new Strip(TEX.needle, 4000, { opacity: 0.98, order: 4, polygonOffset: false });
+const handStrip = new Strip(TEX.hand, 200, { order: 5, polygonOffset: false });
+const ALL_STRIPS = [ribbonFringe, ribbonCore, poolStrip, poolSoft, ringStrip, strandStrip, needleStrip, handStrip];
+
+function groundQuad(strip, c, r, rotDeg, alpha) {
+  if (r <= 0.05) return;
+  // l'opacite par quad est simulee : on reduit la taille du quad plutot que son alpha quand alpha < 1
+  const rr = r * (alpha < 1 ? 0.75 + 0.25 * alpha : 1);
+  const a = rad(rotDeg), ca = Math.cos(a) * rr, sa = Math.sin(a) * rr, z = c.z + 0.6;
+  const i0 = strip.v(V(c.x - ca + sa, c.y - sa - ca, z), 0, 0);
+  const i1 = strip.v(V(c.x + ca + sa, c.y + sa - ca, z), 1, 0);
+  const i2 = strip.v(V(c.x + ca - sa, c.y + sa + ca, z), 1, 1);
+  const i3 = strip.v(V(c.x - ca - sa, c.y - sa + ca, z), 0, 1);
+  strip.quad(i0, i1, i2, i3);
+}
+
+function ribbon(strip, pts, width, t, moving, seed) {
+  const n = pts.length;
+  if (n < 2) return 0;
+  const s = [0];
+  for (let i = 1; i < n; i++) s[i] = s[i - 1] + dist(pts[i], pts[i - 1]);
+  const total = s[n - 1];
+  if (total < 1) return 0;
+  const headLen = Math.min(46, total * .5);
+  let prevL = -1, prevR = -1;
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+    let dir = sub(b, a); dir.z = 0;
+    dir = len(dir) < 1e-3 ? V(1, 0, 0) : nrm(dir);
+    const side = crs(dir, UP);
+    const si = s[i], toTip = total - si;
+    let w = width * (1 + .10 * Math.sin(si * .09 - t * 5.5 + seed) + .06 * Math.sin(si * .23 + t * 8.3));
+    w *= Math.sqrt(clamp(toTip / headLen, 0, 1));
+    w *= 1 + .35 * (1 - clamp(si / 40, 0, 1));
+    let off = V();
+    if (moving) off = mul(side, Math.sin(t * 11 + si * .15 + seed) * 2.6 * (1 - clamp(toTip / 110, 0, 1)));
+    const c = add(add(pts[i], V(0, 0, .7)), off);
+    const u = si / 90 - t * .35;
+    const iL = strip.v(sub(c, mul(side, w)), u, 0), iR = strip.v(add(c, mul(side, w)), u, 1);
+    if (i > 0) strip.quad(prevL, iL, iR, prevR);
+    prevL = iL; prevR = iR;
+  }
+  return total;
+}
+
+// faisceau oriente vers la camera (comme render.AddBeam)
+let camSrc = V();
+function beam(strip, pts, widths, vs) {
+  let pl = -1, pr = -1;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    const tg = nrm(sub(b, a));
+    let side = crs(tg, nrm(sub(camSrc, pts[i])));
+    side = len(side) < 1e-4 ? V(1, 0, 0) : nrm(side);
+    const hw = widths[i] / 2;
+    const l = strip.v(sub(pts[i], mul(side, hw)), 0, vs[i]), r = strip.v(add(pts[i], mul(side, hw)), 1, vs[i]);
+    if (i > 0) strip.quad(pl, l, r, pr);
+    pl = l; pr = r;
+  }
+}
+
+// --- particules : fumee d'encre ---------------------------------------------------------
+const MAXP = 1400;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(MAXP * 3), pSize = new Float32Array(MAXP), pAlpha = new Float32Array(MAXP), pRot = new Float32Array(MAXP);
+pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3).setUsage(THREE.DynamicDrawUsage));
+pGeo.setAttribute("size", new THREE.BufferAttribute(pSize, 1).setUsage(THREE.DynamicDrawUsage));
+pGeo.setAttribute("alpha", new THREE.BufferAttribute(pAlpha, 1).setUsage(THREE.DynamicDrawUsage));
+pGeo.setAttribute("rot", new THREE.BufferAttribute(pRot, 1).setUsage(THREE.DynamicDrawUsage));
+const pMat = new THREE.ShaderMaterial({
+  uniforms: { map: { value: TEX.wisp }, scale: { value: 500 } },
+  vertexShader: `attribute float size; attribute float alpha; attribute float rot; varying float vA; varying float vR;
+    uniform float scale;
+    void main(){ vA = alpha; vR = rot; vec4 mv = modelViewMatrix * vec4(position,1.0);
+      gl_PointSize = size * scale / max(1.0, -mv.z); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform sampler2D map; varying float vA; varying float vR;
+    void main(){ vec2 c = gl_PointCoord - 0.5; float cs = cos(vR), sn = sin(vR);
+      vec2 r = vec2(c.x*cs - c.y*sn, c.x*sn + c.y*cs) + 0.5;
+      float a = texture2D(map, r).a * vA; if (a < 0.01) discard; gl_FragColor = vec4(0.0,0.0,0.0,a); }`,
+  transparent: true, depthWrite: false,
+});
+const points = new THREE.Points(pGeo, pMat);
+points.frustumCulled = false; points.renderOrder = 6;
+world.add(points);
+const parts = [];
+function wisp(p, v, size, alpha, life, opts = {}) {
+  if (parts.length >= MAXP) return;
+  parts.push({ p: p.clone(), v: v.clone(), s0: size, s1: size * (opts.grow || 2.2), a0: alpha / 255, life, age: 0,
+    rot: rand(0, 6.28), dr: rand(-1.2, 1.2), g: opts.g ?? 6, drag: opts.drag ?? 40 });
+}
+function inkSplash(p, dir) {
+  for (let i = 0; i < 10; i++) wisp(p, mul(add(mul(dir, .6), V(rand(-.8, .8), rand(-.8, .8), rand(-.8, .8))), rand(60, 160)), rand(1.2, 2.6), 255, rand(.4, .8), { grow: .3, g: -380, drag: 0 });
+  for (let i = 0; i < 4; i++) wisp(p, V(rand(-20, 20), rand(-20, 20), rand(-20, 20)), rand(4, 7), 170, rand(.4, .7));
+}
+function burst(c, r, n) {
+  for (let i = 0; i < n; i++) {
+    const a = rand(0, 6.28), d = V(Math.cos(a), Math.sin(a), 0);
+    wisp(add(add(c, mul(d, r * rand(.6, 1))), V(0, 0, 2)), add(mul(d, rand(40, 110)), V(0, 0, rand(10, 40))), rand(6, 12), 190, rand(.6, 1.1));
+  }
+}
+function stepParticles(dt) {
+  let k = 0;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i];
+    q.age += dt;
+    if (q.age >= q.life) { parts.splice(i, 1); continue; }
+    const damp = Math.max(0, 1 - q.drag * dt / 100);
+    q.v = mul(q.v, damp); q.v.z += q.g * dt;
+    q.p = add(q.p, mul(q.v, dt));
+    if (q.p.z < 0.3) { q.p.z = 0.3; q.v.z = 0; }
+    q.rot += q.dr * dt;
+  }
+  for (const q of parts) {
+    const f = q.age / q.life;
+    pPos.set([q.p.x, q.p.y, q.p.z], k * 3);
+    pSize[k] = lerp(q.s0, q.s1, f) * 2; pAlpha[k] = q.a0 * (1 - f); pRot[k] = q.rot;
+    k++;
+  }
+  pGeo.setDrawRange(0, k);
+  for (const n of ["position", "size", "alpha", "rot"]) pGeo.attributes[n].needsUpdate = true;
+}
+
+// =====================================================================================
+//  Sons
+// =====================================================================================
+const AUDIO = { ctx: null, buf: {}, on: false, loop: null };
+function b64buf(b64) { const s = atob(b64); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; }
+function initAudio() {
+  if (AUDIO.ctx) return;
+  try {
+    AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    AUDIO.gain = AUDIO.ctx.createGain(); AUDIO.gain.gain.value = 0.8; AUDIO.gain.connect(AUDIO.ctx.destination);
+    for (const [k, v] of Object.entries(window.NARA_SND || {})) {
+      AUDIO.ctx.decodeAudioData(b64buf(v), (b) => AUDIO.buf[k] = b, () => {});
+    }
+  } catch (e) { AUDIO.ctx = null; }
+}
+function play(name, vol = 1, rate = 1) {
+  if (!AUDIO.on || !AUDIO.ctx || !AUDIO.buf[name]) return null;
+  const s = AUDIO.ctx.createBufferSource(); s.buffer = AUDIO.buf[name]; s.playbackRate.value = rate;
+  const g = AUDIO.ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(AUDIO.gain); s.start();
+  return { s, g };
+}
+function startLoop() { stopLoop(); const h = play("crawl_loop", .55); if (h) { h.s.loop = true; AUDIO.loop = h; } }
+function stopLoop() {
+  if (!AUDIO.loop) return;
+  const h = AUDIO.loop; AUDIO.loop = null;
+  try { h.g.gain.setTargetAtTime(0, AUDIO.ctx.currentTime, .1); h.s.stop(AUDIO.ctx.currentTime + .5); } catch (e) {}
+}
+$("sound").addEventListener("click", () => {
+  initAudio();
+  AUDIO.on = !AUDIO.on;
+  if (AUDIO.ctx && AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
+  $("sound").textContent = AUDIO.on ? "Son : activé" : "Son : coupé";
+  $("sound").setAttribute("aria-pressed", AUDIO.on);
+  if (!AUDIO.on) stopLoop();
+});
+
+// =====================================================================================
+//  Logique de la technique (portage de sv_core.lua + cl_fx.lua, en solo)
+// =====================================================================================
+let now = 0, tech = 0, cast = null, nextCast = 0;
+const view = { yaw: 30, pitch: 14, dist: 230, sYaw: 0, sPitch: 8 };
+const input = { fwd: false, back: false, left: false, right: false, stick: V(), boost: false };
+
+function selectTech(i) {
+  tech = i;
+  document.querySelectorAll(".tech").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.t === i)));
+  $("desc").textContent = TECHS[i].desc;
+}
+document.querySelectorAll(".tech").forEach((b) => b.addEventListener("click", () => { selectTech(+b.dataset.t); b.blur(); }));
+selectTech(0);
+
+function setPhase(p) {
+  const prev = cast.phase;
+  cast.phase = p; cast.t0 = now;
+  if (prev !== p) {
+    cast.morphFrom = cast.drawPts; cast.morphStart = now;
+    if (p === PH.RETRACT) { cast.retractPts = cast.drawPts; cast.retractLen = null; }
+    if (p === PH.WINDUP || p === PH.TRAVEL) { cast.ringStart = now; burst(hero.pos, C.PoolRadius * .8, 26); }
+    if (p === PH.BOUND || p === PH.CHOKE || p === PH.PIERCE) { cast.catchStart = now; cast.needles = null; if (cast.target) burst(cast.target.pos, C.TargetPool, 34); }
+  }
+}
+const pathLen = (pts) => { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i], pts[i - 1]); return L; };
+function resample(pts, n) {
+  const out = [];
+  if (!pts.length) return out;
+  if (pts.length === 1) { for (let i = 0; i < n; i++) out.push(pts[0]); return out; }
+  const total = pathLen(pts);
+  let seg = 1, acc = 0;
+  for (let i = 0; i < n; i++) {
+    const want = total * i / Math.max(1, n - 1);
+    while (seg < pts.length - 1 && acc + dist(pts[seg], pts[seg - 1]) < want) { acc += dist(pts[seg], pts[seg - 1]); seg++; }
+    const l = dist(pts[seg], pts[seg - 1]);
+    out.push(lerpV(pts[seg - 1], pts[seg], l > 0 ? clamp((want - acc) / l, 0, 1) : 0));
+  }
+  return out;
+}
+function groundLine(a, b, step) {
+  const n = Math.max(1, Math.ceil(dist2D(a, b) / step)), out = [];
+  for (let i = 0; i <= n; i++) { const p = lerpV(a, b, i / n); p.z = 0; out.push(p); }
+  return out;
+}
+const alive = (e) => e && e.hp > 0;
+
+function aimTarget(range) {
+  const eye = add(hero.pos, V(0, 0, 64));
+  const aim = fwd(view.yaw, 0);
+  let best = null, bd = 0;
+  for (const e of enemies) {
+    if (!alive(e) || e.bound) continue;
+    const to = sub(e.center(), eye);
+    if (len(to) > range) continue;
+    to.z = 0;
+    const d = dot(aim, nrm(to));
+    if (d > 0.9 && d > bd) { best = e; bd = d; }
+  }
+  return best;
+}
+
+function startCast() {
+  initAudio();
+  if (cast) {
+    if (cast.phase === PH.BOUND && tech !== 0 && alive(cast.target)) {
+      cast.tech = tech; cast.lockYaw = yawOf(sub(cast.target.pos, hero.pos));
+      cast.target.mode = 2; cast.dmgNext = null; cast.pierced = false;
+      setPhase(tech === 1 ? PH.CHOKE : PH.PIERCE);
+      play(tech === 1 ? "choke" : "pierce", .9); play("mudra", .6);
+    }
+    return;
+  }
+  if (now < nextCast) return;
+  const feet = V(hero.pos.x, hero.pos.y, 0);
+  if (tech === 0) {
+    cast = { tech: 0, path: [feet], tip: feet, tipYaw: view.yaw, lockYaw: view.yaw, length: 0, seed: rand(0, 100) };
+    hero.yaw = view.yaw;
+    view.sYaw = view.yaw; view.sPitch = 8;
+    setPhase(PH.WINDUP);
+    setTimeout(() => { if (cast && cast.phase === PH.WINDUP) play("mudra", .9); }, 320);
+    try { if (matchMedia("(pointer: fine)").matches && renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); } catch (e) {}
+  } else {
+    const tg = aimTarget(tech === 1 ? C.ChokeRange : C.NuiRange);
+    if (!tg) { flashTip("Aucune cible à portée : tourne la caméra vers un ninja."); return; }
+    const route = groundLine(feet, V(tg.pos.x, tg.pos.y, 0), 10);
+    cast = { tech, path: [feet], route, routeLen: pathLen(route), travel: 0, target: tg, lockYaw: yawOf(sub(tg.pos, hero.pos)), seed: rand(0, 100) };
+    hero.yaw = cast.lockYaw;
+    tg.bound = true; tg.mode = 2;
+    setPhase(PH.TRAVEL);
+    play("mudra", .8); play("cast", .8, 1.15);
+  }
+}
+function cancelCast() {
+  if (!cast) return;
+  if (cast.phase === PH.WINDUP) { cast = null; nextCast = now + .3; return; }
+  retract();
+}
+function freeTarget() { if (cast && cast.target) { cast.target.bound = false; cast.target.mode = 0; } }
+function retract() {
+  if (!cast || cast.phase === PH.RETRACT) return;
+  stopLoop(); freeTarget();
+  let L = pathLen(cast.path);
+  if (cast.target) L = Math.max(L, dist(hero.pos, cast.target.pos));
+  cast.retractEnd = now + L / C.RetractSpeed + .25;
+  setPhase(PH.RETRACT);
+  play("release", .7);
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+function moveTip(dir, step) {
+  let want = add(cast.tip, mul(dir, step));
+  for (const o of OBST) {
+    const d = V(want.x - o.x, want.y - o.y, 0), r = o.r + 4;
+    if (len(d) < r) {
+      const n = nrm(d.x || d.y ? d : V(1, 0, 0));
+      let slide = sub(dir, mul(n, dot(dir, n))); slide.z = 0;
+      if (len(slide) < .2) return false;
+      want = add(cast.tip, mul(nrm(slide), step * len(slide)));
+      if (Math.hypot(want.x - o.x, want.y - o.y) < r) want = add(V(o.x, o.y, 0), mul(n, r));
+    }
+  }
+  if (Math.hypot(want.x, want.y) > 2600) return false;
+  want.z = 0;
+  cast.tip = want;
+  return true;
+}
+
+function tickCast(dt) {
+  const el = now - cast.t0;
+  const p = cast.phase;
+  if (p === PH.WINDUP) {
+    if (el >= C.WindupTime) { setPhase(PH.STEER); play("cast", .9); startLoop(); }
+  } else if (p === PH.STEER) {
+    const diff = angDiff(view.sYaw, cast.tipYaw), mt = C.TurnRate * dt;
+    cast.tipYaw += clamp(diff, -mt, mt);
+    const speed = input.fwd || input.boost ? C.BoostSpeed : input.back ? C.SlowSpeed : C.ShadowSpeed;
+    if (AUDIO.loop) AUDIO.loop.s.playbackRate.value = input.fwd || input.boost ? 1.18 : 1;
+    if (cast.length < C.MaxLength) {
+      const before = cast.tip;
+      if (moveTip(fwd(cast.tipYaw), speed * dt)) cast.length += dist(cast.tip, before);
+    }
+    if (dist(cast.tip, cast.path[cast.path.length - 1]) >= 7) cast.path.push(cast.tip);
+    for (const e of enemies) {
+      if (alive(e) && !e.bound && dist2D(e.pos, cast.tip) <= C.CatchRadius + 10) {
+        cast.path.push(cast.tip);
+        stopLoop();
+        cast.target = e; e.bound = true; e.mode = 1;
+        cast.heroYaw0 = hero.yaw = yawOf(sub(e.pos, hero.pos));
+        e.yaw = yawOf(sub(hero.pos, e.pos)); cast.targetYaw0 = e.yaw;
+        setPhase(PH.BOUND);
+        play("bind", 1);
+        if (document.pointerLockElement) document.exitPointerLock();
+        view.yaw = hero.yaw + 35; view.pitch = 16;
+        return;
+      }
+    }
+    if (el >= C.SteerTime) retract();
+  } else if (p === PH.TRAVEL) {
+    if (!alive(cast.target)) return retract();
+    cast.travel = Math.min(cast.routeLen, cast.travel + C.TravelSpeed * dt);
+    let acc = pathLen(cast.path), i = cast.path.length - 1;
+    while (i < cast.route.length - 1) {
+      const seg = dist(cast.route[i + 1], cast.route[i]);
+      if (acc + seg > cast.travel) break;
+      acc += seg; i++; cast.path.push(cast.route[i]);
+    }
+    if (cast.travel >= cast.routeLen) {
+      setPhase(cast.tech === 1 ? PH.CHOKE : PH.PIERCE);
+      play(cast.tech === 1 ? "choke" : "pierce", .9);
+    }
+  } else if (p === PH.BOUND || p === PH.CHOKE || p === PH.PIERCE) {
+    const t = cast.target;
+    if (!alive(t)) return retract();
+    if (p === PH.BOUND) { if (el >= C.PossessTime) retract(); }
+    else if (p === PH.CHOKE) {
+      if (el >= C.ChokeClimbTime) {
+        if (cast.dmgNext == null) cast.dmgNext = now;
+        if (now >= cast.dmgNext) { cast.dmgNext = now + .25; t.hp -= C.ChokeDPS * .25; }
+      }
+      if (el >= C.ChokeClimbTime + C.ChokeTime) retract();
+    } else {
+      if (!cast.pierced && el >= .17) { cast.pierced = true; t.hp -= C.NuiDamage; }
+      if (el >= C.NuiHoldTime + .2) retract();
+    }
+    if (t.hp <= 0) { t.hp = 0; t.deadAt = now; }
+  } else if (p === PH.RETRACT) {
+    if (now >= cast.retractEnd) { cast = null; nextCast = now + C.Cooldown; }
+  }
+}
+
+// --- ligne affichee (meme logique que CurrentLine dans cl_fx.lua) ---------------------
+function currentLine() {
+  const p = cast.phase;
+  if (p === PH.STEER || p === PH.TRAVEL) {
+    const path = cast.path;
+    if (path.length < 2) return path.length ? [path[0], path[0]] : null;
+    const last = p === PH.STEER ? cast.tip : path[path.length - 1];
+    cast.tipDisp = cast.tipDisp ? lerpV(cast.tipDisp, last, Math.min(1, dt60 * 14)) : last;
+    const pts = path.slice();
+    pts.push(cast.tipDisp);
+    return pts;
+  }
+  if (p === PH.BOUND || p === PH.CHOKE || p === PH.PIERCE) {
+    const link = groundLine(V(hero.pos.x, hero.pos.y, 0), V(cast.target.pos.x, cast.target.pos.y, 0), 14);
+    const k = cast.morphFrom ? ease((now - cast.morphStart) / .55) : 1;
+    if (k >= 1 || !cast.morphFrom || cast.morphFrom.length < 2) return link;
+    const n = Math.max(link.length, 24), a = resample(cast.morphFrom, n), b = resample(link, n);
+    return a.map((q, i) => lerpV(q, b[i], k));
+  }
+  if (p === PH.RETRACT) {
+    const src = cast.retractPts;
+    if (!src || src.length < 2) return null;
+    if (cast.retractLen == null) cast.retractLen = pathLen(src);
+    const left = cast.retractLen - C.RetractSpeed * (now - cast.t0);
+    if (left <= 2) return null;
+    const s2 = [V(hero.pos.x, hero.pos.y, 0), ...src.slice(1)];
+    const out = [s2[0]];
+    let acc = 0;
+    for (let i = 1; i < s2.length; i++) {
+      const l = dist(s2[i], s2[i - 1]);
+      if (acc + l >= left) { out.push(lerpV(s2[i - 1], s2[i], l > 0 ? (left - acc) / l : 0)); return out; }
+      acc += l; out.push(s2[i]);
+    }
+    return out;
+  }
+  return null;
+}
+
+function feelers(pts, t, seed) {
+  if (pts.length < 3) return;
+  const tip = pts[pts.length - 1];
+  let dir = sub(tip, pts[Math.max(0, pts.length - 4)]); dir.z = 0;
+  if (len(dir) < .05) return;
+  dir = nrm(dir);
+  const side = crs(dir, UP);
+  for (const k of [-1, 1]) {
+    // bande a plat sur le sol (comme la bande principale), pas tournee vers la camera
+    let pl = -1, pr = -1;
+    for (let j = 0; j <= 5; j++) {
+      const f = j / 5, sway = Math.sin(t * 9 + k * 1.7 + f * 3 + seed) * 4 * f;
+      const p = add(add(add(sub(tip, mul(dir, 8)), mul(dir, f * 16)), mul(side, k * (2.5 + 5 * f) + sway)), V(0, 0, .9));
+      const w = 2.2 * (1 - f) + .2;
+      const l = strandStrip.v(sub(p, mul(side, w)), 0, f * 2), r = strandStrip.v(add(p, mul(side, w)), 1, f * 2);
+      if (j > 0) strandStrip.quad(pl, l, r, pr);
+      pl = l; pr = r;
+    }
+  }
+}
+
+function drawChoke(t, el) {
+  const tg = cast.target;
+  const feet = V(tg.pos.x, tg.pos.y, 0), neck = tg.neck();
+  let axis = sub(neck, feet); const height = len(axis); axis = nrm(axis);
+  const e1 = nrm(crs(axis, Math.abs(axis.z) > .9 ? V(1, 0, 0) : UP)), e2 = nrm(crs(axis, e1));
+  const climb = easeOut(el / C.ChokeClimbTime);
+  const squeeze = el > C.ChokeClimbTime ? .85 + .15 * Math.sin(t * 14) : 1;
+  const N = C.ChokeTendrils;
+  for (let i = 1; i <= N; i++) {
+    const th0 = (i / N) * Math.PI * 2 + cast.seed * .1, spiral = 1.6 + .4 * Math.sin(i * 1.7);
+    const P = (h) => { const th = th0 + spiral * h; const r = lerp(15, 4.6 * squeeze, h) * (1 + .08 * Math.sin(t * 5 + i + h * 6));
+      return [add(add(feet, mul(axis, h * height)), mul(add(mul(e1, Math.cos(th)), mul(e2, Math.sin(th))), r)), th]; };
+    const hmax = clamp(climb * (.94 + .06 * Math.sin(i)), .02, 1);
+    const ps = [], ws = [], vs = [];
+    for (let k = 0; k <= 18; k++) { const h = hmax * k / 18; ps.push(P(h)[0]); ws.push(lerp(7, 3.2, k / 18)); vs.push(h * 3 - t * .6); }
+    beam(strandStrip, ps, ws, vs);
+    const [hp, th] = P(hmax), hp2 = P(Math.max(0, hmax - .04))[0];
+    const tang = nrm(sub(hp, hp2)), out = add(mul(e1, Math.cos(th)), mul(e2, Math.sin(th)));
+    const right = nrm(crs(tang, out));
+    const hs = el > C.ChokeClimbTime ? 7.5 : 9.5;
+    const c = add(add(hp, mul(tang, hs * .55)), mul(out, .6));
+    const q = (sr, st) => add(add(c, mul(right, sr * hs * .5)), mul(tang, st * hs * .6));
+    const a = handStrip.v(q(-1, -1), 0, 1), b = handStrip.v(q(-1, 1), 0, 0), cc = handStrip.v(q(1, 1), 1, 0), d = handStrip.v(q(1, -1), 1, 1);
+    handStrip.quad(a, b, cc, d);
+  }
+}
+
+const NUI_BONES = ["Spine2", "Spine4", "Pelvis", "R_UpperArm", "L_UpperArm", "R_Thigh", "L_Thigh", "R_Forearm", "L_Forearm", "R_Calf", "L_Calf"];
+function drawNeedles(t, el) {
+  const tg = cast.target;
+  if (!cast.needles) {
+    cast.needles = [];
+    const line = cast.drawPts;
+    for (let i = 1; i <= C.NuiNeedles; i++) {
+      let g;
+      if (line && line.length > 4 && i % 3 === 0) g = line[Math.max(0, line.length - 1 - Math.floor(rand(2, Math.min(line.length - 1, 10))))];
+      else { const a = rand(0, 6.28), d = rand(28, 70); g = V(tg.pos.x + Math.cos(a) * d, tg.pos.y + Math.sin(a) * d, 0); }
+      cast.needles.push({ g, bone: NUI_BONES[(i - 1) % NUI_BONES.length], jit: V(rand(-3, 3), rand(-3, 3), rand(-4, 4)), delay: (i - 1) * .012, lift: rand(.25, .6) });
+    }
+  }
+  for (const nd of cast.needles) {
+    const hit = add(tg.bone(nd.bone), nd.jit);
+    let grow = easeOut((el - nd.delay) / .16);
+    if (el > C.NuiHoldTime) grow *= 1 - ease((el - C.NuiHoldTime) / .3);
+    if (grow <= .01) continue;
+    const dvec = sub(hit, nd.g), dd = len(dvec), dir = nrm(dvec);
+    const tipEnd = add(hit, mul(dir, 9)), ctrl = add(add(nd.g, mul(UP, dd * nd.lift)), mul(dvec, .15));
+    const ps = [], ws = [], vs = [];
+    for (let k = 0; k <= 10; k++) {
+      const f = (k / 10) * grow;
+      ps.push(lerpV(lerpV(nd.g, ctrl, f), lerpV(ctrl, tipEnd, f), f)); ws.push(lerp(5.5, .35, k / 10)); vs.push(f);
+    }
+    beam(needleStrip, ps, ws, vs);
+    groundQuad(poolStrip, nd.g, 7 * grow, nd.delay * 900, 1);
+    if (grow > .98 && !nd.splashed) { nd.splashed = true; inkSplash(hit, dir); }
+  }
+}
+
+function emitAlong(pts, dt) {
+  const moving = cast.phase === PH.STEER || cast.phase === PH.TRAVEL;
+  cast.accTip = (cast.accTip || 0) + dt * (moving ? 46 : 0);
+  cast.accEdge = (cast.accEdge || 0) + dt * Math.min(60, pts.length * .6);
+  const tip = pts[pts.length - 1];
+  while (cast.accTip >= 1) { cast.accTip--; wisp(add(tip, V(rand(-5, 5), rand(-5, 5), 2 + rand(-2, 3))), V(rand(-9, 9), rand(-9, 9), rand(8, 24)), rand(4, 8), 150, rand(.5, 1)); }
+  while (cast.accEdge >= 1) {
+    cast.accEdge--;
+    const q = pts[Math.floor(rand(0, pts.length))];
+    wisp(add(q, V(rand(-1, 1) * C.Width * .8, rand(-1, 1) * C.Width * .8, 1.5)), V(rand(-4, 4), rand(-4, 4), rand(4, 14)), rand(3.5, 6.5), 95, rand(.7, 1.3));
+  }
+}
+
+function poolAlpha() {
+  const p = cast.phase, el = now - cast.t0;
+  if (p === PH.WINDUP || p === PH.TRAVEL) return ease(el / .45);
+  if (p === PH.RETRACT) return 1 - ease((el - (cast.retractLen || 0) / C.RetractSpeed) / .3);
+  return 1;
+}
+
+function drawShadows(t, dt) {
+  for (const s of ALL_STRIPS) s.reset();
+  if (cast) {
+    const feet = V(hero.pos.x, hero.pos.y, 0);
+    if (cast.ringStart != null) {
+      const k = (now - cast.ringStart) / .75;
+      if (k < 1) groundQuad(ringStrip, feet, lerp(12, 120, easeOut(k)), cast.seed * 3, 1 - k);
+    }
+    const pa = poolAlpha();
+    if (pa > .01) {
+      const grow = cast.phase === PH.WINDUP ? easeOut((now - cast.t0) / .6) : 1;
+      const r = C.PoolRadius * grow * (1 + .04 * Math.sin(t * 3 + cast.seed)) * pa;
+      groundQuad(poolSoft, feet, r * 1.45, t * 4 * 57 + cast.seed, 1);
+      groundQuad(poolStrip, feet, r, -t * 6 * 57 + cast.seed * 2, 1);
+    }
+    const line = currentLine();
+    cast.drawPts = line || cast.drawPts;
+    const moving = cast.phase === PH.STEER || cast.phase === PH.TRAVEL;
+    if (line && line.length >= 2) {
+      ribbon(ribbonFringe, line, C.Width * 1.7, t, moving, cast.seed);
+      ribbon(ribbonCore, line, C.Width, t, moving, cast.seed);
+      if (moving) feelers(line, t, cast.seed);
+      emitAlong(line, dt);
+    }
+    const linked = cast.phase === PH.BOUND || cast.phase === PH.CHOKE || cast.phase === PH.PIERCE;
+    if (cast.target && linked) {
+      const tf = V(cast.target.pos.x, cast.target.pos.y, 0);
+      const k = easeOut((now - cast.catchStart) / .35);
+      groundQuad(poolSoft, tf, C.TargetPool * 1.4 * k, t * 5 * 57, 1);
+      groundQuad(poolStrip, tf, C.TargetPool * k, -t * 7 * 57 + cast.seed, 1);
+      if (cast.phase === PH.CHOKE) {
+        drawChoke(t, now - cast.t0);
+        cast.accChoke = (cast.accChoke || 0) + dt * 20;
+        while (cast.accChoke >= 1) { cast.accChoke--; wisp(add(lerpV(tf, cast.target.neck(), rand(0, 1)), V(rand(-8, 8), rand(-8, 8), rand(-8, 8))), V(0, 0, rand(6, 16)), rand(3, 6), 120, rand(.5, .9)); }
+      } else if (cast.phase === PH.PIERCE) drawNeedles(t, now - cast.t0);
+    }
+  }
+  for (const s of ALL_STRIPS) s.flush();
+}
+
+// =====================================================================================
+//  Camera
+// =====================================================================================
+const cam = { last: null, shadow: null, leave: null, dir: null, roll: 0, prevYaw: 0 };
+function setCam(pos, look, fov, roll = 0) {
+  camera.position.copy(S2T(pos));
+  camera.up.set(0, 1, 0);
+  camera.lookAt(S2T(look));
+  if (roll) camera.rotateZ(rad(roll));
+  if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+}
+function orbitCam() {
+  const target = add(view.focus ? view.focus.pos : hero.pos, V(0, 0, 44));
+  const dir = fwd(view.yaw, view.pitch);
+  let pos = sub(target, mul(dir, view.dist));
+  pos.z = Math.max(pos.z, 8);
+  return { pos, look: target, fov: 55 };
+}
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function updateCamera(dt) {
+  const base = orbitCam();
+  if (cast && cast.tech === 0 && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)) {
+    const el = now - cast.t0;
+    const F = fwd(cast.lockYaw), Rt = crs(F, UP);
+    const cinePos = add(add(add(hero.pos, mul(F, 78)), mul(Rt, 52)), V(0, 0, 38));
+    const cineLook = add(hero.pos, V(0, 0, 30));
+    if (cast.phase === PH.WINDUP) {
+      const k = ease(el / .35);
+      const from = cam.lastOrbit || base;
+      const pos = lerpV(from.pos, cinePos, k), look = lerpV(from.look, cineLook, k), fov = lerp(from.fov, 70, k);
+      cam.last = { pos, look, fov };
+      return setCam(pos, look, fov);
+    }
+    const pts = cast.drawPts;
+    if (!pts || pts.length < 2) return;
+    const tip = pts[pts.length - 1];
+    let dir = sub(tip, pts[Math.max(0, pts.length - 5)]); dir.z = 0;
+    dir = len(dir) < .05 ? fwd(cast.tipYaw) : nrm(dir);
+    cam.dir = cam.dir ? nrm(lerpV(cam.dir, dir, Math.min(1, dt * 8))) : dir;
+    let pos = add(add(tip, V(0, 0, C.CamHeight)), mul(cam.dir, -C.CamBack));
+    pos.z += Math.sin(now * 7) * .4;
+    const yawSpeed = angDiff(view.sYaw, cam.prevYaw) / Math.max(dt, .001);
+    cam.prevYaw = view.sYaw;
+    cam.roll = lerp(cam.roll, clamp(-yawSpeed * .02, -7, 7), Math.min(1, dt * 6));
+    let look = add(pos, mul(fwd(view.sYaw, view.sPitch), 100));
+    let fov = C.CamFOV, roll = reduceMotion ? 0 : cam.roll + Math.sin(now * 2.1) * .6;
+    const k = ease(el / C.CamDiveTime);
+    if (k < 1 && cam.last) {
+      const mid = add(lerpV(cam.last.pos, pos, .5), V(0, 0, 40));
+      pos = lerpV(lerpV(cam.last.pos, mid, k), lerpV(mid, pos, k), k);
+      look = lerpV(cam.last.look, look, k); fov = lerp(cam.last.fov, fov, k); roll *= k;
+    }
+    cam.shadow = { pos, look, fov };
+    cam.leave = null;
+    return setCam(pos, look, fov, roll);
+  }
+  if (cam.shadow) {
+    if (cam.leave == null) cam.leave = now;
+    const k = ease((now - cam.leave) / .5);
+    if (k >= 1) cam.shadow = null;
+    else return setCam(lerpV(cam.shadow.pos, base.pos, k), lerpV(cam.shadow.look, base.look, k), lerp(cam.shadow.fov, base.fov, k));
+  }
+  cam.lastOrbit = base;
+  setCam(base.pos, base.look, base.fov);
+}
+
+// =====================================================================================
+//  Entrees
+// =====================================================================================
+const canvas = renderer.domElement;
+let drag = null;
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas.addEventListener("pointerdown", (e) => {
+  if (e.button === 2) { cancelCast(); return; }
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (document.pointerLockElement === canvas) { look(e.movementX, e.movementY); return; }
+  if (!drag || drag.id !== e.pointerId) return;
+  look(e.clientX - drag.x, e.clientY - drag.y);
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+const endDrag = (e) => { if (drag && drag.id === e.pointerId) drag = null; };
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("wheel", (e) => { view.dist = clamp(view.dist * (1 + e.deltaY * .001), 110, 520); e.preventDefault(); }, { passive: false });
+function look(dx, dy) {
+  const touch = matchMedia("(pointer: coarse)").matches ? 1.5 : 1;
+  if (cast && cast.tech === 0 && cast.phase === PH.STEER) {
+    view.sYaw -= dx * .22 * touch;
+    view.sPitch = clamp(view.sPitch + dy * .18 * touch, C.CamPitchMin, C.CamPitchMax);
+  } else if (!(cast && cast.tech === 0 && cast.phase === PH.WINDUP)) {
+    view.yaw -= dx * .3 * touch;
+    view.pitch = clamp(view.pitch + dy * .2 * touch, -5, 70);
+  }
+}
+const KEYS = { KeyW: "fwd", KeyS: "back", KeyA: "left", KeyD: "right", ArrowUp: "fwd", ArrowDown: "back", ArrowLeft: "left", ArrowRight: "right" };
+addEventListener("keydown", (e) => {
+  if (KEYS[e.code]) { input[KEYS[e.code]] = true; e.preventDefault(); }
+  if (e.code === "Digit1" || e.code === "Numpad1") selectTech(0);
+  if (e.code === "Digit2" || e.code === "Numpad2") selectTech(1);
+  if (e.code === "Digit3" || e.code === "Numpad3") selectTech(2);
+  if (e.code === "KeyR") selectTech((tech + 1) % 3);
+  if ((e.code === "Space" || e.code === "Enter") && !e.repeat) { startCast(); e.preventDefault(); }
+  if (e.code === "Escape") cancelCast();
+});
+addEventListener("keyup", (e) => { if (KEYS[e.code]) input[KEYS[e.code]] = false; });
+$("cast").addEventListener("click", (e) => { startCast(); e.currentTarget.blur(); });
+$("cancel").addEventListener("click", (e) => { cancelCast(); e.currentTarget.blur(); });
+const boost = $("boost");
+boost.addEventListener("pointerdown", () => input.boost = true);
+for (const ev of ["pointerup", "pointercancel", "pointerleave"]) boost.addEventListener(ev, () => input.boost = false);
+const stick = $("stick"), knob = stick.firstElementChild;
+let stickId = null;
+stick.addEventListener("pointerdown", (e) => { stickId = e.pointerId; stick.setPointerCapture(e.pointerId); moveStick(e); });
+stick.addEventListener("pointermove", (e) => { if (e.pointerId === stickId) moveStick(e); });
+const endStick = () => { stickId = null; input.stick = V(); knob.style.transform = ""; };
+stick.addEventListener("pointerup", endStick); stick.addEventListener("pointercancel", endStick);
+function moveStick(e) {
+  const r = stick.getBoundingClientRect();
+  let x = (e.clientX - r.left - r.width / 2) / (r.width / 2), y = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+  const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+  input.stick = V(-y, -x, 0);   // avant = haut du joystick, gauche = gauche
+  knob.style.transform = `translate(${x * 34}px, ${y * 34}px)`;
+}
+let tipTimer = 0;
+function flashTip(text) { const t = $("tip"); t.textContent = text; t.style.opacity = 1; tipTimer = 3; t.style.display = "block"; }
+
+// =====================================================================================
+//  Monde : deplacements du heros et des ninjas
+// =====================================================================================
+function moveInput() {
+  let f = (input.fwd ? 1 : 0) - (input.back ? 1 : 0) + input.stick.x;
+  let s = (input.left ? 1 : 0) - (input.right ? 1 : 0) + input.stick.y;
+  const l = Math.hypot(f, s); if (l > 1) { f /= l; s /= l; }
+  return { f, s };
+}
+function blocked(p) {
+  for (const o of OBST) if (Math.hypot(p.x - o.x, p.y - o.y) < o.r + 12) return true;
+  return Math.hypot(p.x, p.y) > 2300;
+}
+function stepWorld(dt) {
+  const frozen = cast && [PH.WINDUP, PH.STEER, PH.TRAVEL, PH.CHOKE, PH.PIERCE].includes(cast.phase);
+  const mi = moveInput();
+  let heroMoved = 0;
+  if (!frozen && (Math.abs(mi.f) > .05 || Math.abs(mi.s) > .05)) {
+    const speed = 150;
+    if (cast && cast.phase === PH.BOUND) {
+      // possession : le heros se deplace sans tourner, la cible fait le meme mouvement dans son propre repere
+      const F = fwd(hero.yaw), L = fwd(hero.yaw + 90);
+      const d = add(mul(F, mi.f * speed * dt), mul(L, mi.s * speed * dt));
+      const np = add(hero.pos, d);
+      if (!blocked(np)) hero.pos = np;
+      const t = cast.target;
+      const tF = fwd(t.yaw), tL = fwd(t.yaw + 90);
+      const tp = add(t.pos, add(mul(tF, mi.f * speed * dt), mul(tL, mi.s * speed * dt)));
+      if (!blocked(tp)) t.pos = tp;
+      t.walk += dt * 9; t.walkAmt = lerp(t.walkAmt, 1, Math.min(1, dt * 8));
+    } else {
+      const F = fwd(view.yaw), L = fwd(view.yaw + 90);
+      const d = add(mul(F, mi.f), mul(L, mi.s));
+      const np = add(hero.pos, mul(nrm(d), speed * dt * Math.min(1, len(d))));
+      if (!blocked(np)) hero.pos = np;
+      hero.yaw += angDiff(yawOf(d), hero.yaw) * Math.min(1, dt * 10);
+    }
+    heroMoved = 1;
+    hero.walk += dt * 9;
+  }
+  hero.walkAmt = lerp(hero.walkAmt, heroMoved, Math.min(1, dt * 8));
+  if (cast && frozen) hero.yaw = cast.lockYaw;
+
+  for (const e of enemies) {
+    if (e.hp <= 0) {
+      e.fall = Math.min(1, e.fall + dt * 1.8);
+      e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 8));
+      if (now - e.deadAt > 5 && !(cast && cast.target === e)) { e.hp = 100; e.fall = 0; e.pos = V(rand(-700, 700), rand(-700, 700), 0); }
+      continue;
+    }
+    if (e.bound) {
+      if (!(cast && cast.phase === PH.BOUND && heroMoved)) e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 10));
+      continue;
+    }
+    if (e.wait > 0) { e.wait -= dt; e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 6)); continue; }
+    if (!e.goal || dist2D(e.pos, e.goal) < 20) {
+      e.goal = V(rand(-900, 900), rand(-900, 900), 0);
+      e.wait = rand(.6, 2.2);
+      continue;
+    }
+    const d = nrm(sub(e.goal, e.pos));
+    const np = add(e.pos, mul(d, 88 * dt));
+    if (blocked(np)) { e.goal = null; continue; }
+    e.pos = np;
+    e.yaw += angDiff(yawOf(d), e.yaw) * Math.min(1, dt * 4);
+    e.walk += dt * 6.5; e.walkAmt = lerp(e.walkAmt, 1, Math.min(1, dt * 5));
+  }
+}
+
+function updateWeights(dt) {
+  const wantK = cast && ((cast.tech === 0 && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)) || (cast.tech === 1 && (cast.phase === PH.TRAVEL || cast.phase === PH.CHOKE)));
+  const wantA = cast && [PH.WINDUP, PH.STEER, PH.TRAVEL, PH.BOUND, PH.CHOKE, PH.PIERCE].includes(cast.phase);
+  hero.wKneel = lerp(hero.wKneel, wantK ? 1 : 0, Math.min(1, dt * 7));
+  hero.wArms = lerp(hero.wArms, wantA ? 1 : 0, Math.min(1, dt * 9));
+  for (const e of enemies) {
+    // la cible prise par Kagemane copie aussi le sceau du lanceur
+    const mimic = cast && cast.target === e && cast.phase === PH.BOUND;
+    e.wArms = lerp(e.wArms, mimic ? hero.wArms : 0, Math.min(1, dt * 6));
+  }
+}
+
+// =====================================================================================
+//  HUD
+// =====================================================================================
+const count = $("count"), cNum = $("countNum"), cBar = $("countBar"), cLbl = $("countLbl"), cHint = $("countHint");
+let lastSec = null;
+function showCount(total, left, label, hint, appear) {
+  count.style.opacity = appear;
+  const secs = Math.max(0, Math.ceil(left));
+  if (cNum.textContent !== String(secs)) cNum.textContent = secs;
+  const sub = left - Math.floor(left);
+  cNum.style.transform = `scale(${1 + .18 * Math.max(0, sub - .82) / .18})`;
+  cBar.style.transform = `scaleX(${clamp(left / total, 0, 1)})`;
+  count.classList.toggle("urgent", left <= 3);
+  cLbl.textContent = label; cHint.textContent = hint;
+}
+function updateHUD(dt) {
+  const touch = matchMedia("(pointer: coarse)").matches;
+  let shown = false;
+  if (cast && cast.tech === 0 && cast.phase === PH.STEER) {
+    const left = C.SteerTime - (now - cast.t0);
+    showCount(C.SteerTime, left, "影真似の術 · Kagemane no Jutsu", touch ? "" :
+      "Souris : diriger l'ombre · Z : accélérer · S : ralentir · Clic droit : annuler", ease((now - cast.t0 - C.CamDiveTime * .6) / .3));
+    const s = Math.ceil(left);
+    if (s <= 5 && s > 0 && s !== lastSec) { lastSec = s; play("tick", .7); }
+    shown = true;
+  } else lastSec = null;
+  if (cast && cast.phase === PH.BOUND) {
+    showCount(C.PossessTime, C.PossessTime - (now - cast.t0), "Possession réussie", "La cible imite tes mouvements · Choisis 2 ou 3 puis Lancer pour enchaîner", ease((now - cast.t0) / .3));
+    shown = true;
+  }
+  if (cast && cast.phase === PH.CHOKE) {
+    const total = C.ChokeClimbTime + C.ChokeTime;
+    showCount(total, total - (now - cast.t0), "影首縛りの術 · Étreinte de l'ombre", "", 1);
+    shown = true;
+  }
+  if (!shown) count.style.opacity = 0;
+  document.body.classList.toggle("immersed", !!(cast && cast.tech === 0 && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)));
+
+  // ecran desature + bords d'encre en vue ombre
+  let k = 0;
+  if (cast && cast.tech === 0 && cast.phase === PH.STEER) k = ease((now - cast.t0) / C.CamDiveTime);
+  else if (cam.shadow && cam.leave != null) k = 1 - ease((now - cam.leave) / .5);
+  canvas.style.filter = k > .01 ? `saturate(${1 - .62 * k}) contrast(${1 + .18 * k}) brightness(${1 - .06 * k})` : "";
+  $("veil").style.opacity = (.92 * k).toFixed(3);
+
+  const busy = !!cast;
+  $("cancel").disabled = !busy || cast.phase === PH.RETRACT;
+  $("cast").disabled = busy && !(cast.phase === PH.BOUND && tech !== 0);
+  $("cast").textContent = busy && cast.phase === PH.BOUND && tech !== 0 ? "Enchaîner" : "Lancer";
+  if (tipTimer > 0) { tipTimer -= dt; if (tipTimer <= 0) { $("tip").textContent = "Glisse pour tourner la caméra · ZQSD pour marcher · Espace pour lancer"; } }
+  $("tip").style.opacity = cast && cast.phase === PH.STEER ? 0 : 1;
+
+  const tg = $("target");
+  const rows = enemies.map((e) => `<div class="row"><span>${e.name}${e.bound ? " · pris dans l'ombre" : e.hp <= 0 ? " · K.O." : ""}</span><div class="hp"><i style="width:${Math.max(0, e.hp)}%"></i></div></div>`).join("");
+  if (tg.innerHTML !== rows) tg.innerHTML = rows;
+}
+
+// =====================================================================================
+//  Boucle
+// =====================================================================================
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+
+let dt60 = 1 / 60, last = performance.now();
+window.__advance = (dtv) => frame(dtv);           // pour les captures automatiques
+window.__api = { startCast, cancelCast, selectTech, view, input, hero, enemies, get cast() { return cast; }, PH };
+function frame(dt) {
+  dt60 = dt;
+  now += dt;
+  if (cast) tickCast(dt);
+  stepWorld(dt);
+  updateWeights(dt);
+  hero.pose(now);
+  for (const e of enemies) e.pose(now);
+  updateCamera(dt);
+  const cs = camera.position;
+  camSrc = V(cs.x, -cs.z, cs.y);
+  drawShadows(now, dt);
+  stepParticles(dt);
+  pMat.uniforms.scale.value = renderer.domElement.height / (2 * Math.tan(rad(camera.fov) / 2));
+  updateHUD(dt);
+  renderer.render(scene, camera);
+}
+function loop(t) {
+  const dt = Math.min(.05, (t - last) / 1000);
+  last = t;
+  if (!window.__manual) frame(dt);
+  requestAnimationFrame(loop);
+}
+$("loading").hidden = true;
+requestAnimationFrame(loop);
+</script>

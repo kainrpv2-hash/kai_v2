@@ -1,0 +1,86 @@
+NARA - MANIPULATION DES OMBRES pour Garry's Mod (Naruto RP)
+==========================================================
+
+Fan-art non commercial. Naruto (c) Masashi Kishimoto / Shueisha / Studio Pierrot.
+
+Contenu
+-------
+  addon\nara_kage\            L'addon complet, pret a copier :
+      lua\                    Arme "Hiden : Ombres (Nara)", logique serveur, rendu des ombres
+      materials\nara_kage\    Textures VTF + materiaux VMT (encre noire, generees par tools\make_assets.py)
+      sound\nara_kage\        Sons (sceau, depart de l'ombre, boucle de reptation, capture...)
+
+Aucun modele a compiler : tout est en Lua, textures et sons.
+
+
+Installation
+------------
+  - Solo / test : copie addon\nara_kage dans  ...\GarrysMod\garrysmod\addons\
+  - Serveur     : copie le meme dossier dans garrysmod\addons\ du serveur.
+    Les joueurs doivent recevoir les textures et les sons :
+      * soit tu publies l'addon sur le Workshop et tu ajoutes resource.AddWorkshop("<ID>")
+        dans lua\autorun\nara_kage_init.lua,
+      * soit tu utilises ton FastDL (dossiers materials\ et sound\).
+
+
+En jeu
+------
+  Menu Q > Armes > "Naruto - Clan Nara" > Hiden : Ombres (Nara)
+
+      Clic gauche   lance la technique choisie
+      Clic droit    annule / relache l'ombre
+      R             technique suivante
+
+  1. Kagemane no Jutsu (Manipulation des ombres)
+       - Le joueur met le genou droit a terre et forme le sceau du Rat devant lui
+         (la camera passe en plan 3/4 pour montrer le geste).
+       - L'ombre part : la camera plonge dans la pointe de l'ombre, en vue premiere personne.
+       - Un compteur de 13 secondes apparait en bas au milieu de l'ecran.
+       - La souris dirige l'ombre : elle prend la direction ou regarde la camera
+         (virage limite pour garder une trajectoire de serpent).
+         Avancer (Z/W) = plus vite, Reculer (S) = plus lent. Clic droit = annuler.
+       - L'ombre glisse le long des murs, ne descend pas dans le vide, ne monte pas les marches trop hautes.
+       - Si elle touche un joueur ou un PNJ : il est pris. Le lien se tend en ligne droite,
+         la cible imite les deplacements du lanceur (et forme le meme sceau) pendant 10 s.
+       - A 0 s sans cible : l'ombre revient dans le lanceur.
+
+  2. Kage Kubishibari no Jutsu (Etreinte de l'ombre)
+       - Sur une cible deja prise par Kagemane : appuie sur R pour choisir la technique, puis clic gauche.
+       - Sinon : vise une cible, l'ombre file droit vers elle.
+       - Cinq bras d'ombre en spirale montent le long du corps ; des mains griffues serrent le cou.
+
+  3. Kage Nui no Jutsu (Couture des ombres)
+       - Meme fonctionnement. Des aiguilles d'ombre jaillissent du sol et du trace de l'ombre,
+         transpercent la cible (giclees d'encre) et la clouent sur place.
+
+
+Reglages
+--------
+  Tout est dans lua\nara_kage\sh_config.lua (commentaires en francais) :
+  duree du compteur (SteerTime = 13), vitesse, portee, largeur de l'ombre, genou pose (R ou L),
+  hauteur de la camera dans l'ombre, degats, sons...
+
+  Commandes console (admin / serveur) :
+    nara_kage_damage_scale 1      multiplicateur des degats (Kubishibari, Kage Nui)
+    nara_kage_affect_players 1    les ombres attrapent les joueurs (1) ou seulement les PNJ (0)
+
+
+Comment c'est fait
+------------------
+  - Pose du genou a terre + sceau : aucune animation GMod ne fait ce geste. L'addon part de
+    l'animation de repos et replace les os (cinematique inverse dans BuildBonePositions).
+    Ca marche sur tous les modeles de joueur ValveBiped, quelle que soit leur taille.
+  - Ombre au sol : bande de maillage qui suit le sol (traces), largeur qui ondule, bords
+    d'encre dechiquetes qui glissent le long de l'ombre, pointe arrondie qui tatonne,
+    deux antennes devant la pointe, volutes de fumee d'encre, flaque sous le lanceur et la cible.
+  - Camera : plan 3/4 pendant le sceau, plongee en arc vers la pointe, roulis dans les virages,
+    ecran desature avec bords d'encre tant qu'on voit depuis l'ombre.
+
+
+Probleme ?
+----------
+  - Ombre en damier violet/noir : materials\nara_kage\ n'est pas dans l'addon ou pas telecharge.
+  - Pas de son : sound\nara_kage\ manquant cote client.
+  - Le personnage ne s'agenouille pas : le modele de joueur n'utilise pas le squelette ValveBiped
+    (certains modeles du Workshop). Le sceau et l'ombre fonctionnent quand meme.
+  - Envoie-moi l'erreur Lua de la console si quelque chose casse.

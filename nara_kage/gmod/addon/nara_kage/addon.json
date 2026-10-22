@@ -1,0 +1,6 @@
+{
+	"title": "Nara - Manipulation des ombres",
+	"type": "weapon",
+	"tags": ["fun", "roleplay"],
+	"ignore": ["*.psd", "*.txt", "*.md"]
+}
