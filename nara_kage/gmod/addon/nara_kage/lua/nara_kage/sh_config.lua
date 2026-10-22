@@ -1,10 +1,10 @@
--- Nara : manipulation des ombres - reglages
+-- Nara : Kagemane no Jutsu (manipulation des ombres) - reglages
 -- Toutes les distances sont en unites Source (1 u = 1 pouce ; un joueur fait 72 u).
 
 NARA = NARA or {}
 
 NARA.Config = {
-	-- ------------------------------------------------------------ Kagemane no Jutsu
+	-- ------------------------------------------------------------ deroulement
 	-- Le lanceur met un genou a terre et forme le sceau, puis la camera passe
 	-- dans la pointe de l'ombre et le joueur la dirige a la souris.
 	WindupTime     = 1.15,  -- genou a terre + sceau avant que l'ombre parte (s)
@@ -15,40 +15,29 @@ NARA.Config = {
 	SlowSpeed      = 90,    -- en maintenant Reculer (S)
 	TurnRate       = 170,   -- vitesse de virage max de l'ombre (degres/s)
 	MaxLength      = 3000,  -- longueur max de l'ombre (u)
-	CatchRadius    = 26,    -- l'ombre attrape ce qui est a cette distance de sa pointe
+	CatchRadius    = 24,    -- l'ombre attrape ce qui est a cette distance de sa pointe
 	PossessTime    = 10,    -- duree de la possession une fois la cible prise (s)
 	BreakDistance  = 3400,  -- le lien casse si le lanceur s'eloigne plus que ca
+	RetractSpeed   = 1800,  -- vitesse de retour de l'ombre (u/s)
+	Cooldown       = 4,     -- delai avant de pouvoir relancer (s)
 	KneelLeg       = "R",   -- genou pose au sol : "R" (droit) ou "L" (gauche)
+	AffectNPCs     = true,
 
-	-- Camera dans la pointe de l'ombre
-	CamHeight      = 11,    -- hauteur de l'oeil au-dessus du sol
-	CamBack        = 6,     -- recul derriere la pointe (on voit le bout de la tete de l'ombre)
-	CamFOV         = 100,
+	-- ------------------------------------------------------------ forme de l'ombre
+	Width          = 5,     -- demi-largeur de la bande (la bande fait 10 u de large)
+	TipLength      = 55,    -- longueur de la pointe effilee
+	PoolLength     = 36,    -- demi-longueur de la flaque sous le lanceur (vers l'avant)
+	PoolWidth      = 22,    -- demi-largeur de cette flaque
+	PoolForward    = 10,    -- la flaque est decalee vers l'avant du lanceur
+	TargetPool     = 24,    -- rayon de la flaque sous la cible prise
+
+	-- ------------------------------------------------------------ camera dans la pointe
+	CamHeight      = 14,    -- hauteur de l'oeil au-dessus du sol
+	CamBack        = 24,    -- recul derriere la pointe : sa pointe effilee reste visible devant soi
+	CamFOV         = 95,
 	CamPitchMin    = -55,
 	CamPitchMax    = 35,
-
-	-- ------------------------------------------------------------ Kage Kubishibari no Jutsu
-	ChokeRange     = 1100,  -- portee si la cible n'est pas deja prise dans l'ombre
-	ChokeTendrils  = 5,     -- nombre de mains d'ombre
-	ChokeClimbTime = 1.3,   -- temps pour que les mains montent jusqu'au cou (s)
-	ChokeTime      = 6,     -- duree de l'etranglement (s)
-	ChokeDPS       = 9,     -- degats par seconde une fois les mains au cou
-
-	-- ------------------------------------------------------------ Kage Nui no Jutsu
-	NuiRange       = 1300,
-	NuiNeedles     = 11,    -- nombre d'aiguilles d'ombre
-	NuiDamage      = 40,    -- degats a l'impact (partages entre les aiguilles)
-	NuiHoldTime    = 1.6,   -- la cible reste clouee (s)
-
-	-- ------------------------------------------------------------ commun
-	TravelSpeed    = 1100,  -- vitesse de l'ombre envoyee directement sur une cible (u/s)
-	RetractSpeed   = 1800,  -- vitesse de retour de l'ombre (u/s)
-	Width          = 15,    -- largeur de la bande d'ombre
-	PoolRadius     = 34,    -- rayon de l'ombre sous le lanceur
-	TargetPool     = 30,    -- rayon de l'ombre sous la cible
-	Cooldown       = 4,     -- delai entre deux techniques (s)
-	AffectNPCs     = true,
-	ScreenFX       = true,  -- ecran desature + bords d'encre en vue ombre
+	ScreenFX       = true,  -- image assombrie + vignettage pendant la vue depuis l'ombre
 
 	-- Sons (chemins relatifs a sound/). Mets "" pour couper un son.
 	Sounds = {
@@ -56,26 +45,14 @@ NARA.Config = {
 		Cast    = "nara_kage/cast.wav",
 		Crawl   = "nara_kage/crawl_loop.wav",
 		Bind    = "nara_kage/bind.wav",
-		Choke   = "nara_kage/choke.wav",
-		Pierce  = "nara_kage/pierce.wav",
 		Release = "nara_kage/release.wav",
 		Tick    = "nara_kage/tick.wav",
 	},
 }
 
--- Ordre des techniques dans l'arme (touche R pour changer)
-NARA.Techniques = {
-	{ id = "kagemane",    name = "Kagemane no Jutsu",        jp = "影真似の術",   fr = "Manipulation des ombres" },
-	{ id = "kubishibari", name = "Kage Kubishibari no Jutsu", jp = "影首縛りの術", fr = "Etreinte de l'ombre" },
-	{ id = "kagenui",     name = "Kage Nui no Jutsu",        jp = "影縫いの術",   fr = "Couture des ombres" },
-}
-
--- Phases reseau d'une technique
+-- Phases reseau de la technique
 NARA.PH_NONE    = 0
 NARA.PH_WINDUP  = 1   -- genou a terre + sceau
 NARA.PH_STEER   = 2   -- l'ombre avance, dirigee depuis sa pointe (compteur 13 s)
-NARA.PH_TRAVEL  = 3   -- l'ombre file droit vers une cible (Kubishibari / Kage Nui)
-NARA.PH_BOUND   = 4   -- cible prise : elle imite le lanceur
-NARA.PH_CHOKE   = 5   -- mains d'ombre au cou
-NARA.PH_PIERCE  = 6   -- aiguilles d'ombre
-NARA.PH_RETRACT = 7   -- l'ombre revient au lanceur
+NARA.PH_BOUND   = 3   -- cible prise : elle imite le lanceur
+NARA.PH_RETRACT = 4   -- l'ombre revient au lanceur

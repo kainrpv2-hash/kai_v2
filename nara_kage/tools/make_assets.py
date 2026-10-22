@@ -7,8 +7,8 @@ Sorties :
   ../gmod/addon/nara_kage/sound/nara_kage/*.wav
   ../preview/textures.js  (les memes textures en PNG base64, pour la preview)
 
-Toutes les textures sont blanches avec un masque alpha : la couleur (noir d'encre)
-vient de la couleur des sommets / des particules, comme dans le jeu.
+Toutes les textures sont blanches avec un masque alpha : la couleur (noir)
+vient de la couleur des sommets, comme dans le jeu.
 """
 import base64
 import io
@@ -17,7 +17,7 @@ import struct
 import wave
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ADDON = os.path.join(HERE, "..", "gmod", "addon", "nara_kage")
@@ -30,32 +30,6 @@ rng = np.random.default_rng(1984)
 
 # --------------------------------------------------------------------------- bruit
 
-def fbm(h, w, beta=2.2, seed=0):
-    """Bruit fractal periodique (tuile parfaitement) normalise dans [0, 1]."""
-    r = np.random.default_rng(seed)
-    white = r.standard_normal((h, w))
-    fy = np.fft.fftfreq(h)[:, None]
-    fx = np.fft.fftfreq(w)[None, :]
-    f = np.sqrt(fx * fx + fy * fy)
-    f[0, 0] = 1.0
-    spec = np.fft.fft2(white) / f ** (beta / 2.0)
-    spec[0, 0] = 0
-    n = np.real(np.fft.ifft2(spec))
-    n -= n.min()
-    return n / n.max()
-
-
-def noise1d(n, beta=2.0, seed=0):
-    r = np.random.default_rng(seed)
-    f = np.fft.rfftfreq(n)
-    f[0] = 1.0
-    spec = np.fft.rfft(r.standard_normal(n)) / f ** (beta / 2.0)
-    spec[0] = 0
-    x = np.fft.irfft(spec, n)
-    x -= x.min()
-    return x / x.max()
-
-
 def smoothstep(a, b, x):
     t = np.clip((x - a) / (b - a), 0.0, 1.0)
     return t * t * (3 - 2 * t)
@@ -64,169 +38,40 @@ def smoothstep(a, b, x):
 # --------------------------------------------------------------------------- textures
 
 def tex_ribbon():
-    """Bande d'ombre au sol. U = le long de l'ombre (tuile), V = en travers."""
-    W, H = 512, 128
-    u = np.arange(W)[None, :] / W
+    """Bande d'ombre au sol, comme dans la video : noir plein, bord net et lisse.
+    U = le long de l'ombre, V = en travers. Seul l'anticrenelage du bord adoucit."""
+    W, H = 8, 64
     v = (np.arange(H)[:, None] + 0.5) / H
-    d = np.abs(v - 0.5) * 2.0                       # 0 au centre, 1 au bord
-    edge_a = noise1d(W, 2.4, 11)[None, :]
-    edge_b = noise1d(W, 2.4, 12)[None, :]
-    # chaque bord a sa propre ondulation
-    thr = np.where(v < 0.5, 0.70 + 0.17 * (edge_a - 0.5) * 2, 0.70 + 0.17 * (edge_b - 0.5) * 2)
-    core = 1.0 - smoothstep(thr - 0.05, thr + 0.015, d)
-    # filaments d'encre qui depassent du bord
-    strands = fbm(H, W, 1.6, 13)
-    strands = smoothstep(0.55, 0.75, strands) * (1.0 - smoothstep(thr, 1.0, d))
-    a = np.maximum(core, 0.55 * strands)
-    # legere vie a l'interieur (l'ombre reste presque opaque)
-    a *= 0.93 + 0.07 * fbm(H, W, 2.0, 14)
-    a[0, :] = 0
-    a[-1, :] = 0
-    return a
+    d = np.abs(v - 0.5) * 2.0
+    a = 1.0 - smoothstep(0.86, 1.0, d)
+    return np.repeat(a, W, axis=1)
 
 
 def tex_pool():
-    """Flaque d'ombre sous le lanceur / la cible."""
+    """Flaque d'ombre elliptique sous le lanceur et sous la cible : disque net."""
     S = 256
     y, x = np.mgrid[0:S, 0:S]
     cx = (x + 0.5) / S * 2 - 1
     cy = (y + 0.5) / S * 2 - 1
     r = np.sqrt(cx * cx + cy * cy)
-    th = (np.arctan2(cy, cx) / (2 * np.pi)) % 1.0
-    lob = noise1d(1024, 2.6, 21)
-    idx = (th * 1024).astype(int) % 1024
-    thr = 0.70 + 0.16 * (lob[idx] - 0.5) * 2
-    core = 1.0 - smoothstep(thr - 0.09, thr + 0.02, r)
-    wisp = smoothstep(0.55, 0.78, fbm(S, S, 1.7, 22)) * (1.0 - smoothstep(thr, 0.98, r))
-    a = np.maximum(core, 0.5 * wisp)
-    a *= 0.94 + 0.06 * fbm(S, S, 2.0, 23)
-    a *= 1.0 - smoothstep(0.93, 1.0, r)
-    return a
-
-
-def tex_ring():
-    """Onde d'ombre qui s'etend au sol au moment du sceau."""
-    S = 256
-    y, x = np.mgrid[0:S, 0:S]
-    cx = (x + 0.5) / S * 2 - 1
-    cy = (y + 0.5) / S * 2 - 1
-    r = np.sqrt(cx * cx + cy * cy)
-    th = (np.arctan2(cy, cx) / (2 * np.pi)) % 1.0
-    lob = noise1d(1024, 2.2, 31)
-    idx = (th * 1024).astype(int) % 1024
-    c = 0.80 + 0.06 * (lob[idx] - 0.5) * 2
-    a = np.exp(-((r - c) / 0.07) ** 2)
-    a *= 0.6 + 0.4 * fbm(S, S, 1.8, 32)
-    a *= 1.0 - smoothstep(0.95, 1.0, r)
-    return np.clip(a * 1.15, 0, 1)
-
-
-def tex_wisp():
-    """Volute de fumee d'encre (particules)."""
-    S = 128
-    y, x = np.mgrid[0:S, 0:S]
-    cx = (x + 0.5) / S * 2 - 1
-    cy = (y + 0.5) / S * 2 - 1
-    r = np.sqrt(cx * cx + cy * cy)
-    n = fbm(S, S, 3.0, 41)
-    m = np.exp(-(r / 0.5) ** 2.0)
-    a = smoothstep(0.2, 0.9, n * 0.7 + m * 0.55) * m
-    a *= 1.0 - smoothstep(0.85, 1.0, r)
-    return np.clip(a / a.max(), 0, 1)
-
-
-def tex_strand():
-    """Filament d'ombre pour les tentacules (faisceaux). X = en travers, Y = le long (tuile)."""
-    W, H = 64, 256
-    xx = (np.arange(W)[None, :] + 0.5) / W
-    d = np.abs(xx - 0.5) * 2
-    wob = noise1d(H, 2.2, 51)[:, None]
-    thr = 0.62 + 0.18 * (wob - 0.5) * 2
-    a = 1.0 - smoothstep(thr - 0.12, thr + 0.05, d)
-    a *= 0.9 + 0.1 * fbm(H, W, 2.0, 52)
-    a[:, 0] = 0
-    a[:, -1] = 0
-    return a
-
-
-def tex_needle():
-    """Aiguille d'ombre tranchante (Kage Nui) : bord net, coeur plein."""
-    W, H = 32, 128
-    xx = (np.arange(W)[None, :] + 0.5) / W
-    d = np.abs(xx - 0.5) * 2
-    a = 1.0 - smoothstep(0.72, 0.9, d) + 0 * np.arange(H)[:, None]
-    a[:, 0] = 0
-    a[:, -1] = 0
-    return a
-
-
-def tex_hand():
-    """Main d'ombre griffue (Kage Kubishibari). Le poignet est en bas, les doigts en haut."""
-    S = 512
-    img = Image.new("L", (S, S), 0)
-    dr = ImageDraw.Draw(img)
-    # poignet + paume
-    dr.polygon([(196, 512), (316, 512), (340, 320), (172, 320)], fill=255)
-    dr.ellipse((140, 200, 372, 400), fill=255)
-    # doigts : (base x, base y, angle en degres, longueur, epaisseur)
-    fingers = [(168, 320, -62, 120, 52),   # pouce
-               (180, 236, -20, 170, 48),
-               (232, 214, -5, 190, 50),
-               (286, 218, 9, 178, 48),
-               (334, 244, 24, 140, 42)]
-    for bx, by, ang, ln, th in fingers:
-        a = np.radians(ang)
-        pts = []
-        segs = 3
-        x, y = bx, by
-        cur = a
-        for s in range(segs):
-            nx = x + np.sin(cur) * ln / segs
-            ny = y - np.cos(cur) * ln / segs
-            w = th * (1.0 - 0.22 * s)
-            dr.line((x, y, nx, ny), fill=255, width=int(w))
-            dr.ellipse((nx - w / 2, ny - w / 2, nx + w / 2, ny + w / 2), fill=255)
-            x, y = nx, ny
-            cur += np.radians(14 if ang >= -20 else -10)   # doigts qui se recourbent : prise
-        # griffe pointue
-        tip = (x + np.sin(cur) * th * 0.9, y - np.cos(cur) * th * 0.9)
-        px, py = np.cos(cur) * th * 0.35, np.sin(cur) * th * 0.35
-        dr.polygon([(x - px, y - py), (x + px, y + py), tip], fill=255)
-    img = img.filter(ImageFilter.GaussianBlur(3))
-    a = np.asarray(img.resize((128, 128), Image.LANCZOS), dtype=np.float64) / 255.0
-    # bord encre irregulier
-    a = smoothstep(0.25, 0.65, a * (0.85 + 0.3 * fbm(128, 128, 1.8, 61)))
-    a[-1, :] = a[-2, :]
-    return a
+    return 1.0 - smoothstep(0.90, 0.985, r)
 
 
 def tex_vignette():
-    """Bords d'encre de l'ecran pendant la vue depuis la pointe de l'ombre."""
+    """Vignettage doux et arrondi de l'ecran pendant la vue depuis l'ombre."""
     S = 256
     y, x = np.mgrid[0:S, 0:S]
     cx = (x + 0.5) / S * 2 - 1
     cy = (y + 0.5) / S * 2 - 1
-    r = np.sqrt((cx * 0.92) ** 2 + (cy * 1.0) ** 2)
-    th = (np.arctan2(cy, cx) / (2 * np.pi)) % 1.0
-    lob = noise1d(1024, 3.2, 71)
-    idx = (th * 1024).astype(int) % 1024
-    thr = 0.86 + 0.10 * (lob[idx] - 0.5) * 2
-    a = smoothstep(thr - 0.32, thr + 0.12, r)
-    a = np.maximum(a, smoothstep(1.05, 1.35, r))
-    a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2)), dtype=np.float64) / 255
-    a *= 0.85 + 0.15 * fbm(S, S, 2.2, 72)
-    return np.clip(a, 0, 1)
+    # rectangle arrondi (super-ellipse), comme le cadre sombre de la video
+    r = (np.abs(cx) ** 4 + np.abs(cy) ** 4) ** 0.25
+    return np.clip(smoothstep(0.55, 1.08, r) ** 1.3, 0, 1)
 
 
 TEXTURES = {
     # nom : (fonction, clamp S, clamp T)
     "shadow_ribbon": (tex_ribbon, False, True),
     "shadow_pool": (tex_pool, True, True),
-    "shadow_ring": (tex_ring, True, True),
-    "shadow_wisp": (tex_wisp, True, True),
-    "shadow_strand": (tex_strand, True, False),
-    "shadow_needle": (tex_needle, True, False),
-    "shadow_hand": (tex_hand, True, True),
     "shadow_vignette": (tex_vignette, True, True),
 }
 
@@ -379,34 +224,6 @@ def snd_bind():
     return norm(rev * 0.7 + thump + tone)
 
 
-def snd_choke():
-    n = int(1.8 * SR)
-    t = np.arange(n) / SR
-    creak = np.zeros(n)
-    f = 70 + 60 * t
-    ph = np.cumsum(2 * np.pi * f / SR)
-    creak = np.sign(np.sin(ph)) * 0.3 * bandpass(rng.standard_normal(n), 200, 1600)
-    squeeze = sweep_noise(n, 180, 620, 0.3, 9)
-    x = (creak * 0.6 + squeeze) * env(n, 0.3, 0.6)
-    x += np.sin(2 * np.pi * 42 * t) * env(n, 0.4, 0.8) * 0.5
-    return norm(x)
-
-
-def snd_pierce():
-    n = int(1.1 * SR)
-    t = np.arange(n) / SR
-    x = np.zeros(n)
-    for i, t0 in enumerate([0.0, 0.035, 0.06, 0.09, 0.12, 0.15]):
-        k0 = int(t0 * SR)
-        m = n - k0
-        tt = np.arange(m) / SR
-        swish = bandpass(np.random.default_rng(80 + i).standard_normal(m), 1800, 7000) * np.exp(-tt / 0.03)
-        thunk = np.sin(2 * np.pi * (140 + 25 * i) * tt) * np.exp(-tt / 0.06) * 0.6
-        x[k0:] += swish * 0.5 + thunk
-    x += np.sin(2 * np.pi * 50 * t) * np.exp(-t / 0.25) * 0.8
-    return norm(x)
-
-
 def snd_release():
     n = int(1.0 * SR)
     t = np.arange(n) / SR
@@ -427,8 +244,6 @@ SOUNDS = {
     "cast": snd_cast,
     "crawl_loop": snd_crawl_loop,
     "bind": snd_bind,
-    "choke": snd_choke,
-    "pierce": snd_pierce,
     "release": snd_release,
     "tick": snd_tick,
 }

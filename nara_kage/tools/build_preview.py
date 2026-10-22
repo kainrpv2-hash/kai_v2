@@ -12,7 +12,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 PREVIEW = os.path.join(HERE, "..", "preview")
 SND = os.path.join(HERE, "..", "gmod", "addon", "nara_kage", "sound", "nara_kage")
-NAMES = ["mudra", "cast", "crawl_loop", "bind", "choke", "pierce", "release", "tick"]
+NAMES = ["mudra", "cast", "crawl_loop", "bind", "release", "tick"]
 
 
 def sounds_js():

@@ -1,8 +1,0 @@
-"UnlitGeneric"
-{
-	"$basetexture" "nara_kage/shadow_wisp"
-	"$translucent" "1"
-	"$vertexcolor" "1"
-	"$vertexalpha" "1"
-	"$nocull" "1"
-}

@@ -1,13 +1,12 @@
--- Hiden : manipulation des ombres (clan Nara)
---   Clic gauche : lance la technique choisie
+-- Kagemane no Jutsu (clan Nara) : manipulation des ombres
+--   Clic gauche : genou a terre, sceau, puis l'ombre part (camera dans sa pointe)
 --   Clic droit  : annule / relache l'ombre
---   R           : technique suivante
 AddCSLuaFile()
 
-SWEP.PrintName = "Hiden : Ombres (Nara)"
+SWEP.PrintName = "Kagemane no Jutsu"
 SWEP.Author = "Nara Kage pack"
 SWEP.Category = "Naruto - Clan Nara"
-SWEP.Instructions = "Clic gauche : lancer | Clic droit : annuler / relacher | R : technique suivante"
+SWEP.Instructions = "Clic gauche : lancer l'ombre | Souris : la diriger | Clic droit : annuler / relacher"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.Slot = 4
@@ -32,34 +31,17 @@ function SWEP:Initialize()
 	self:SetHoldType(self.HoldType)
 end
 
-function SWEP:SetupDataTables()
-	self:NetworkVar("Int", 0, "Tech")
-end
-
-function SWEP:CurrentTech()
-	return math.Clamp(self:GetTech(), 0, #NARA.Techniques - 1) + 1
-end
-
 function SWEP:PrimaryAttack()
 	self:SetNextPrimaryFire(CurTime() + 0.6)
-	if CLIENT then return end
-	NARA.Start(self:GetOwner(), self:CurrentTech())
+	if SERVER then NARA.Start(self:GetOwner()) end
 end
 
 function SWEP:SecondaryAttack()
 	self:SetNextSecondaryFire(CurTime() + 0.4)
-	if CLIENT then return end
-	NARA.Cancel(self:GetOwner())
+	if SERVER then NARA.Cancel(self:GetOwner()) end
 end
 
-function SWEP:Reload()
-	if (self.NextSwitch or 0) > CurTime() then return end
-	self.NextSwitch = CurTime() + 0.35
-	if CLIENT then return end
-	self:SetTech((self:GetTech() + 1) % #NARA.Techniques)
-	local t = NARA.Techniques[self:CurrentTech()]
-	self:GetOwner():ChatPrint("[Nara] " .. t.name .. " (" .. t.fr .. ")")
-end
+function SWEP:Reload() end
 
 function SWEP:Holster()
 	if SERVER and IsValid(self:GetOwner()) then NARA.Cancel(self:GetOwner()) end
@@ -71,11 +53,9 @@ function SWEP:OnRemove()
 end
 
 function SWEP:DrawHUD()
-	local rec = NARA.Casts[self:GetOwner()]
-	if rec and rec.phase ~= NARA.PH_NONE then return end
-	local t = NARA.Techniques[self:CurrentTech()]
-	draw.SimpleTextOutlined(t.name, "DermaLarge", ScrW() / 2, ScrH() - 140,
+	if NARA.Casts[self:GetOwner()] then return end
+	draw.SimpleTextOutlined("Kagemane no Jutsu", "DermaLarge", ScrW() / 2, ScrH() - 140,
 		Color(235, 230, 220), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 2, Color(0, 0, 0, 200))
-	draw.SimpleTextOutlined(t.fr .. "    Clic gauche : lancer   Clic droit : annuler   R : technique suivante", "DermaDefault",
+	draw.SimpleTextOutlined("Clic gauche : lancer l'ombre    Clic droit : annuler", "DermaDefault",
 		ScrW() / 2, ScrH() - 110, Color(200, 195, 185), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, Color(0, 0, 0, 200))
 end

@@ -6,13 +6,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
 /* Mise en page : la scene 3D occupe tout l'ecran, le HUD flotte par-dessus comme dans le jeu.
-   Un seul monde visuel (encre sur scene ensoleillee) : pas de theme clair/sombre. */
+   Un seul monde visuel (clairiere sombre, ombre noire) : pas de theme clair/sombre. */
 :root {
-  --ink: #0e0d0b;
-  --ink-soft: rgba(14, 13, 11, .72);
-  --paper: #f1eadb;
-  --paper-dim: #b9b1a1;
-  --moss: #8c9a5b;
+  --ink: #070807;
+  --ink-soft: rgba(7, 8, 7, .6);
+  --paper: #eef0e8;
+  --paper-dim: #a9b0a2;
+  --leaf: #7fa45a;
   --ember: #e0553c;
   --display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
   --body: "Zen Kaku Gothic New", "Hiragino Sans", "Segoe UI", system-ui, sans-serif;
@@ -23,132 +23,99 @@ html, body { height: 100%; }
 body { background: var(--ink); color: var(--paper); font-family: var(--body); overflow: hidden; touch-action: none;
   -webkit-user-select: none; user-select: none; }
 #stage { position: fixed; inset: 0; }
-#stage canvas { display: block; width: 100%; height: 100%; transition: filter .25s linear; }
-#veil { position: fixed; inset: -2%; pointer-events: none; background: var(--ink); opacity: 0;
+#stage canvas { display: block; width: 100%; height: 100%; }
+#veil { position: fixed; inset: 0; pointer-events: none; background: var(--ink); opacity: .45;
   -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
 
 .hud { position: fixed; pointer-events: none; z-index: 2; }
 .hud * { pointer-events: auto; }
 
-/* rouleau des techniques */
-#scroll { top: calc(env(safe-area-inset-top, 0px) + 14px); left: max(16px, env(safe-area-inset-left, 0px));
-  display: grid; gap: 6px; width: min(300px, calc(100vw - 32px)); padding: 12px; border-radius: 4px;
-  background: rgba(14,13,11,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-#scroll h1 { margin: 0 0 4px; font: 800 1.35rem/1.1 var(--display); letter-spacing: .02em; text-wrap: balance;
-  text-shadow: 0 1px 10px rgba(0,0,0,.6); }
-#scroll h1 small { display: block; font: 500 .68rem/1.4 var(--body); letter-spacing: .14em; text-transform: uppercase;
-  color: var(--paper-dim); }
-.tech { display: grid; grid-template-columns: 2.1rem 1fr auto; align-items: center; gap: 10px; text-align: left;
-  border: 0; border-radius: 3px; padding: 8px 10px; background: rgba(241,234,219,.06); color: var(--paper);
-  font: inherit; cursor: pointer; transition: background .15s, transform .15s; }
-.tech:hover { background: rgba(241,234,219,.12); }
-.tech:focus-visible, .btn:focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
-.tech .kan { font: 800 1.45rem/1 var(--display); color: var(--paper-dim); text-align: center; }
-.tech .nm { font-weight: 700; font-size: .86rem; line-height: 1.25; }
-.tech .nm span { display: block; font-weight: 400; font-size: .74rem; color: var(--paper-dim); }
-.tech .key { font: 500 .7rem var(--body); color: var(--paper-dim); border: 1px solid rgba(241,234,219,.25);
-  border-radius: 3px; padding: 1px 6px; font-variant-numeric: tabular-nums; }
-.tech[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
-.tech[aria-pressed="true"] .kan, .tech[aria-pressed="true"] .nm span { color: #4a4436; }
-.tech[aria-pressed="true"] .key { color: #4a4436; border-color: rgba(14,13,11,.3); }
-#desc { margin: 2px 0 0; font-size: .76rem; line-height: 1.5; color: var(--paper-dim); text-shadow: 0 1px 6px rgba(0,0,0,.8);
-  max-width: 34ch; }
+#title { top: calc(env(safe-area-inset-top, 0px) + 16px); left: max(16px, env(safe-area-inset-left, 0px));
+  max-width: min(340px, calc(100vw - 32px)); display: grid; gap: 6px; transition: opacity .3s; }
+#title h1 { margin: 0; font: 800 1.5rem/1.1 var(--display); letter-spacing: .02em; text-wrap: balance;
+  text-shadow: 0 2px 14px rgba(0,0,0,.7); }
+#title h1 span { display: block; font: 600 .95rem/1.3 var(--display); color: var(--paper-dim); letter-spacing: .3em; }
+#title p { margin: 0; font-size: .78rem; line-height: 1.55; color: var(--paper-dim); text-shadow: 0 1px 8px rgba(0,0,0,.9); }
+#title kbd { font: 500 .7rem var(--body); border: 1px solid rgba(238,240,232,.3); border-radius: 3px; padding: 0 5px;
+  color: var(--paper); }
 
-/* actions */
 #actions { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
   display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .btn { border: 0; border-radius: 3px; cursor: pointer; font: 700 .9rem var(--body); letter-spacing: .06em;
   padding: 12px 18px; background: var(--paper); color: var(--ink); min-width: 9.5rem; text-align: center; }
 .btn.ghost { background: var(--ink-soft); color: var(--paper); }
-.btn[disabled] { opacity: .45; cursor: default; }
+.btn[disabled] { opacity: .4; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
 #boost { display: none; }
-#sound { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: max(16px, env(safe-area-inset-right, 0px));
-  min-width: 0; padding: 8px 12px; font-size: .75rem; }
+#sound { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 16px); right: max(16px, env(safe-area-inset-right, 0px));
+  min-width: 0; padding: 8px 12px; font-size: .75rem; transition: opacity .3s; }
 
-/* compteur : panneau trace au pinceau, en bas au milieu */
-#count { left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 4vh); transform: translateX(-50%);
-  display: grid; justify-items: center; gap: 2px; padding: 20px 64px 18px; opacity: 0; transition: opacity .25s;
+#target { right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 60px);
+  font-size: .74rem; color: var(--paper-dim); display: grid; gap: 4px; justify-items: end; pointer-events: none;
+  text-shadow: 0 1px 8px rgba(0,0,0,.9); transition: opacity .3s; }
+#target b { color: var(--paper); font-weight: 700; }
+
+/* compteur en bas au milieu */
+#count { left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 5vh); transform: translateX(-50%);
+  display: grid; justify-items: center; gap: 2px; padding: 22px 72px 20px; opacity: 0; transition: opacity .25s;
   pointer-events: none; }
-#count::before { content: ""; position: absolute; inset: -30px -26px -26px; z-index: -1; background: var(--ink); opacity: .86;
-  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
-#count .lbl { font: 500 .66rem var(--body); letter-spacing: .2em; text-transform: uppercase; color: var(--paper-dim);
+#count::before { content: ""; position: absolute; inset: -16px -40px; z-index: -1;
+  background: radial-gradient(closest-side, rgba(7,8,7,.82), rgba(7,8,7,.6) 55%, rgba(7,8,7,0)); }
+#count .lbl { font: 500 .66rem var(--body); letter-spacing: .22em; text-transform: uppercase; color: var(--paper-dim);
   white-space: nowrap; }
 #count .num { font: 800 clamp(3rem, 9vw, 4.6rem)/1 var(--display); font-variant-numeric: tabular-nums;
   min-width: 2ch; text-align: center; transform-origin: 50% 60%; }
-#count .bar { width: min(240px, 52vw); height: 4px; background: rgba(241,234,219,.16); margin-top: 6px; }
+#count .bar { width: min(220px, 50vw); height: 3px; background: rgba(238,240,232,.16); margin-top: 6px; }
 #count .bar i { display: block; height: 100%; width: 100%; background: var(--paper); transform-origin: left; }
-#count .hint { margin-top: 8px; font-size: .7rem; color: var(--paper-dim); text-align: center; max-width: 52ch;
-  line-height: 1.5; }
-#count.urgent .num, #count.urgent .bar i { color: var(--ember); background-color: var(--ember); }
-#count.urgent .num { background: none; }
+#count .hint { margin-top: 8px; font-size: .7rem; color: var(--paper-dim); text-align: center; white-space: nowrap; }
+#count.urgent .num { color: var(--ember); }
+#count.urgent .bar i { background: var(--ember); }
 
-/* bandeau d'aide */
-#tip { left: 50%; top: calc(env(safe-area-inset-top, 0px) + 16px); transform: translateX(-50%);
-  font-size: .76rem; color: var(--paper); background: var(--ink-soft); padding: 7px 14px; border-radius: 3px;
-  white-space: nowrap; transition: opacity .3s; pointer-events: none; }
-#target { right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 56px);
-  width: 190px; font-size: .72rem; color: var(--paper); display: grid; gap: 8px; pointer-events: none;
-  padding: 10px 12px; border-radius: 4px; background: rgba(14,13,11,.55); }
-#target .row { display: grid; gap: 3px; }
-#target .hp { height: 4px; background: rgba(241,234,219,.16); }
-#target .hp i { display: block; height: 100%; background: var(--ember); transition: width .2s; }
-
-/* joystick tactile */
 #stick { left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-  width: 112px; height: 112px; border-radius: 50%; background: rgba(14,13,11,.4); border: 1px solid rgba(241,234,219,.2);
+  width: 112px; height: 112px; border-radius: 50%; background: rgba(7,8,7,.4); border: 1px solid rgba(238,240,232,.2);
   display: none; touch-action: none; }
 #stick i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
-  background: rgba(241,234,219,.75); }
+  background: rgba(238,240,232,.75); }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; font: 600 1rem var(--display); z-index: 5;
   background: var(--ink); color: var(--paper-dim); letter-spacing: .1em; }
 
+body.immersed #title, body.immersed #target, body.immersed #sound { opacity: 0; pointer-events: none; }
+
 @media (pointer: coarse) {
   #stick, #boost { display: block; }
-  .tech .key { display: none; }
+  .keys { display: none; }
 }
 @media (max-width: 640px) {
-  #scroll { right: max(16px, env(safe-area-inset-right, 0px)); width: auto; padding: 6px;
-    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  #scroll h1, #desc, .tech .key, .tech .nm span { display: none; }
-  .tech { grid-template-columns: 1fr; justify-items: center; gap: 2px; padding: 6px 4px; text-align: center; }
-  .tech .kan { font-size: 1.2rem; }
-  .tech .nm { font-size: .68rem; }
-  #sound { top: calc(env(safe-area-inset-top, 0px) + 84px); }
-  #target { top: calc(env(safe-area-inset-top, 0px) + 84px); right: auto; left: max(16px, env(safe-area-inset-left, 0px));
-    width: 150px; padding: 8px 10px; }
-  #tip { display: none; }
+  #title h1 { font-size: 1.2rem; }
+  #title p { display: none; }
+  #target { top: calc(env(safe-area-inset-top, 0px) + 60px); }
   .btn { min-width: 7.5rem; padding: 11px 14px; font-size: .82rem; }
-  #count { padding: 14px 40px 14px; bottom: calc(env(safe-area-inset-bottom, 0px) + 196px); }
+  #count { padding: 16px 44px 14px; bottom: calc(env(safe-area-inset-bottom, 0px) + 196px); }
   #count .hint { display: none; }
 }
-body.immersed #scroll, body.immersed #target, body.immersed #sound { opacity: 0; pointer-events: none; }
-#scroll, #target, #sound { transition: opacity .3s; }
-@media (prefers-reduced-motion: reduce) { #stage canvas, #count, #tip { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #count, #title, #target, #sound { transition: none; } }
 </style>
 
 <div id="stage"></div>
 <div id="veil"></div>
 <div id="loading">影 · chargement</div>
 
-<div class="hud" id="scroll">
-  <h1>Hiden : les ombres <small>Clan Nara · preview de l'addon GMod</small></h1>
-  <button class="tech" data-t="0" aria-pressed="true"><span class="kan">影</span><span class="nm">Kagemane no Jutsu<span>Manipulation des ombres</span></span><span class="key">1</span></button>
-  <button class="tech" data-t="1" aria-pressed="false"><span class="kan">縛</span><span class="nm">Kage Kubishibari<span>Étreinte de l'ombre</span></span><span class="key">2</span></button>
-  <button class="tech" data-t="2" aria-pressed="false"><span class="kan">縫</span><span class="nm">Kage Nui<span>Couture des ombres</span></span><span class="key">3</span></button>
-  <p id="desc"></p>
+<div class="hud" id="title">
+  <h1><span>影真似の術</span>Kagemane no Jutsu</h1>
+  <p>Un genou à terre, le sceau du Rat. L'ombre part et la caméra plonge dans sa pointe : 13 secondes pour la diriger vers un ninja. Prise, la cible imite tes mouvements.</p>
+  <p class="keys"><kbd>Espace</kbd> lancer · souris : tourner / diriger · <kbd>Z</kbd> accélérer · <kbd>S</kbd> ralentir · clic droit : annuler · <kbd>ZQSD</kbd> marcher</p>
 </div>
 
 <button class="btn ghost hud" id="sound" aria-pressed="false">Son : coupé</button>
+<div class="hud" id="target"></div>
 
 <div class="hud" id="actions">
   <button class="btn ghost" id="boost">Accélérer</button>
   <button class="btn ghost" id="cancel" disabled>Annuler</button>
-  <button class="btn" id="cast">Lancer</button>
+  <button class="btn" id="cast">Lancer l'ombre</button>
 </div>
 
 <div class="hud" id="stick"><i></i></div>
-<div class="hud" id="tip">Glisse pour tourner la caméra · ZQSD pour marcher · Espace pour lancer</div>
-<div class="hud" id="target"></div>
 
 <div class="hud" id="count" aria-live="polite">
   <div class="lbl" id="countLbl">Kagemane no Jutsu</div>
@@ -168,18 +135,11 @@ body.immersed #scroll, body.immersed #target, body.immersed #sound { opacity: 0;
 // =====================================================================================
 const C = {
   WindupTime: 1.15, CamDiveTime: 0.45, SteerTime: 13, ShadowSpeed: 250, BoostSpeed: 430, SlowSpeed: 90,
-  TurnRate: 170, MaxLength: 3000, CatchRadius: 26, PossessTime: 10, KneelLeg: "R",
-  CamHeight: 11, CamBack: 6, CamFOV: 100, CamPitchMin: -55, CamPitchMax: 35,
-  ChokeTendrils: 5, ChokeClimbTime: 1.3, ChokeTime: 6, ChokeDPS: 9, ChokeRange: 1100,
-  NuiRange: 1300, NuiNeedles: 11, NuiDamage: 40, NuiHoldTime: 1.6,
-  TravelSpeed: 1100, RetractSpeed: 1800, Width: 15, PoolRadius: 34, TargetPool: 30, Cooldown: 1.2,
+  TurnRate: 170, MaxLength: 3000, CatchRadius: 24, PossessTime: 10, RetractSpeed: 1800, Cooldown: 1.2, KneelLeg: "R",
+  Width: 5, TipLength: 55, PoolLength: 36, PoolWidth: 22, PoolForward: 10, TargetPool: 24,
+  CamHeight: 14, CamBack: 24, CamFOV: 95, CamPitchMin: -55, CamPitchMax: 35,
 };
-const PH = { NONE: 0, WINDUP: 1, STEER: 2, TRAVEL: 3, BOUND: 4, CHOKE: 5, PIERCE: 6, RETRACT: 7 };
-const TECHS = [
-  { name: "Kagemane no Jutsu", desc: "Un genou à terre, le sceau du Rat. L'ombre part, la caméra plonge dans sa pointe : 13 secondes pour la diriger vers une cible. Prise, la cible imite tes mouvements." },
-  { name: "Kage Kubishibari", desc: "L'ombre file vers la cible visée, ou part de celle déjà prise. Des mains d'ombre grimpent le long du corps jusqu'au cou et serrent." },
-  { name: "Kage Nui", desc: "Des aiguilles d'ombre jaillissent du sol et transpercent la cible, qui reste clouée sur place." },
-];
+const PH = { NONE: 0, WINDUP: 1, STEER: 2, BOUND: 3, RETRACT: 4 };
 
 const $ = (id) => document.getElementById(id);
 const clamp = (x, a, b) => Math.min(Math.max(x, a), b);
@@ -208,7 +168,7 @@ const UP = V(0, 0, 1);
 const S2T = (v) => new THREE.Vector3(v.x, v.z, -v.y);   // Source -> three.js
 
 // =====================================================================================
-//  Rendu de base
+//  Rendu de base : clairiere au crepuscule, comme la video de reference
 // =====================================================================================
 const stage = $("stage");
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -217,42 +177,30 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.02;
+renderer.toneMappingExposure = 0.92;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xc9d6dc);
-scene.fog = new THREE.Fog(0xc9d6dc, 1600, 5200);
+scene.background = new THREE.Color(0x3b4d53);
+scene.fog = new THREE.Fog(0x2c393b, 800, 3200);
 const camera = new THREE.PerspectiveCamera(60, 1, 1, 12000);
 const world = new THREE.Group();
 world.rotation.x = -Math.PI / 2;     // le monde est ecrit en coordonnees Source (z en haut)
 scene.add(world);
 
-function texFrom(name, repeatS) {
+function texFrom(name, wrapS) {
   const t = new THREE.TextureLoader().load(window.NARA_TEX[name]);
-  t.encoding = THREE.LinearEncoding;
   t.anisotropy = 4;
-  if (repeatS) { t.wrapS = THREE.RepeatWrapping; }
+  if (wrapS) t.wrapS = THREE.RepeatWrapping;
   return t;
 }
-const TEX = {
-  ribbon: texFrom("shadow_ribbon", true), pool: texFrom("shadow_pool"), ring: texFrom("shadow_ring"),
-  wisp: texFrom("shadow_wisp"), strand: texFrom("shadow_strand"), needle: texFrom("shadow_needle"),
-  hand: texFrom("shadow_hand"),
-};
-TEX.strand.wrapT = THREE.RepeatWrapping;
+const TEX = { ribbon: texFrom("shadow_ribbon", true), pool: texFrom("shadow_pool") };
 $("veil").style.webkitMaskImage = $("veil").style.maskImage = `url(${window.NARA_TEX.shadow_vignette})`;
-{
-  const st = document.createElement("style");
-  st.textContent = `#count::before { -webkit-mask-image: url(${window.NARA_TEX.shadow_ribbon}); mask-image: url(${window.NARA_TEX.shadow_ribbon}); }`;
-  document.head.appendChild(st);
-}
 
-// --- lumiere : fin d'apres-midi, soleil bas qui allonge les ombres ---------------------
-const hemi = new THREE.HemisphereLight(0xdde8f0, 0x6f5d3f, 0.62);
+const hemi = new THREE.HemisphereLight(0x9db6c2, 0x1f2c17, 0.62);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffe3bf, 1.55);
-sun.position.copy(V(-900, 700, 1100));
+const sun = new THREE.DirectionalLight(0xd6e8d8, 0.85);
+sun.position.copy(V(-500, 900, 1300));
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -1300; sun.shadow.camera.right = 1300;
@@ -263,8 +211,7 @@ sun.shadow.normalBias = 0.6;
 world.add(sun);
 world.add(sun.target);
 
-// --- terrain d'entrainement ------------------------------------------------------------
-function noiseCanvas(size, paint) {
+function canvasTex(size, paint) {
   const c = document.createElement("canvas");
   c.width = c.height = size;
   paint(c.getContext("2d"), size);
@@ -273,85 +220,66 @@ function noiseCanvas(size, paint) {
   t.anisotropy = 8;
   return t;
 }
-function speckle(g, s, cols, n, rmin, rmax) {
+function blots(g, s, cols, n, rmin, rmax, amin, amax) {
   for (let i = 0; i < n; i++) {
     g.fillStyle = cols[i % cols.length];
-    g.globalAlpha = rand(0.08, 0.35);
-    g.beginPath(); g.arc(rand(0, s), rand(0, s), rand(rmin, rmax), 0, 7); g.fill();
+    g.globalAlpha = rand(amin, amax);
+    g.beginPath(); g.ellipse(rand(0, s), rand(0, s), rand(rmin, rmax), rand(rmin, rmax), rand(0, 3), 0, 7); g.fill();
   }
   g.globalAlpha = 1;
 }
-const grassTex = noiseCanvas(512, (g, s) => {
-  g.fillStyle = "#7d8f4f"; g.fillRect(0, 0, s, s);
-  speckle(g, s, ["#6a7c3f", "#93a35d", "#5c6d36", "#a3ad6a"], 2600, 2, 9);
-  g.strokeStyle = "#55652f"; g.globalAlpha = .35;
-  for (let i = 0; i < 1600; i++) { const x = rand(0, s), y = rand(0, s); g.beginPath(); g.moveTo(x, y); g.lineTo(x + rand(-2, 2), y - rand(3, 7)); g.stroke(); }
+// herbe verte et douce, presque peinte
+const grassTex = canvasTex(512, (g, s) => {
+  g.fillStyle = "#3f7a2d"; g.fillRect(0, 0, s, s);
+  blots(g, s, ["#4a8a35", "#356826", "#529440", "#2f5f22"], 900, 10, 40, .08, .22);
+  g.strokeStyle = "#3a6d28"; g.globalAlpha = .25;
+  for (let i = 0; i < 2200; i++) { const x = rand(0, s), y = rand(0, s); g.beginPath(); g.moveTo(x, y); g.lineTo(x + rand(-1.5, 1.5), y - rand(2, 5)); g.stroke(); }
   g.globalAlpha = 1;
 });
 grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-grassTex.repeat.set(26, 26);
+grassTex.repeat.set(30, 30);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshLambertMaterial({ map: grassTex }));
 ground.receiveShadow = true;
 world.add(ground);
 
-const dirtTex = noiseCanvas(1024, (g, s) => {
-  const r = s / 2;
-  const grd = g.createRadialGradient(r, r, r * 0.2, r, r, r);
-  grd.addColorStop(0, "rgba(196,170,124,1)"); grd.addColorStop(0.78, "rgba(186,160,116,1)"); grd.addColorStop(1, "rgba(186,160,116,0)");
-  g.fillStyle = grd; g.fillRect(0, 0, s, s);
-  g.globalCompositeOperation = "source-atop";
-  speckle(g, s, ["#a88d63", "#cdb88f", "#9a7f57", "#d8c59e"], 5200, 1.5, 7);
-  g.strokeStyle = "#8f7652"; g.globalAlpha = .18; g.lineWidth = 2;
-  for (let i = 0; i < 60; i++) { g.beginPath(); const y = rand(0, s); g.moveTo(0, y); g.bezierCurveTo(s * .3, y + rand(-40, 40), s * .6, y + rand(-40, 40), s, y + rand(-30, 30)); g.stroke(); }
-});
-const dirt = new THREE.Mesh(new THREE.PlaneGeometry(2600, 2600), new THREE.MeshLambertMaterial({ map: dirtTex, transparent: true }));
-dirt.position.z = 0.15;
-dirt.receiveShadow = true;
-world.add(dirt);
-
-const OBST = [];   // obstacles ronds (l'ombre glisse autour)
-const matWood = new THREE.MeshLambertMaterial({ color: 0x8a6440 });
-const matBark = new THREE.MeshLambertMaterial({ color: 0x5b4330 });
-const matLeaf = [0x4d6b34, 0x5d7c3c, 0x3f5a2c].map((c) => new THREE.MeshLambertMaterial({ color: c }));
-const matRope = new THREE.MeshLambertMaterial({ color: 0xd7c9a2 });
-const matRock = new THREE.MeshLambertMaterial({ color: 0x8b8a83 });
-function cyl(r1, r2, h, mat, seg = 12) {
+const OBST = [];   // obstacles ronds : l'ombre glisse autour
+const matBark = new THREE.MeshLambertMaterial({ color: 0x2f2620 });
+const matLeaf = [0x253d22, 0x2e4a29, 0x1f3420].map((c) => new THREE.MeshLambertMaterial({ color: c }));
+const matBush = [0x2f5227, 0x37602c].map((c) => new THREE.MeshLambertMaterial({ color: c }));
+function cyl(r1, r2, h, mat, seg = 14) {
   const g = new THREE.CylinderGeometry(r1, r2, h, seg);
   g.rotateX(Math.PI / 2);
   const m = new THREE.Mesh(g, mat);
   m.castShadow = m.receiveShadow = true;
   return m;
 }
-function post(x, y) {
-  const p = cyl(7, 7.5, 62, matWood); p.position.set(x, y, 31); world.add(p);
-  for (const z of [22, 42]) { const r = cyl(7.8, 7.8, 3.5, matRope); r.position.set(x, y, z); world.add(r); }
-  OBST.push({ x, y, r: 8 });
+function blob(r, mat, x, y, z, sz = 0.7) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat);
+  m.position.set(x, y, z); m.scale.set(1, 1, sz);
+  m.castShadow = true; m.receiveShadow = true;
+  world.add(m);
 }
-post(330, 190); post(-240, 330); post(120, -380); post(-420, -160);
+// grands arbres au tronc epais qui encadrent la clairiere
 function tree(x, y, s) {
-  const t = cyl(9 * s, 13 * s, 190 * s, matBark, 8); t.position.set(x, y, 95 * s); world.add(t);
-  for (let i = 0; i < 4; i++) {
-    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(60, 90) * s, 0), matLeaf[i % 3]);
-    b.position.set(x + rand(-40, 40) * s, y + rand(-40, 40) * s, (170 + rand(0, 110)) * s);
-    b.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
-    b.castShadow = true; world.add(b);
-  }
-  OBST.push({ x, y, r: 13 * s + 2 });
+  const t = cyl(24 * s, 36 * s, 300 * s, matBark); t.position.set(x, y, 150 * s); world.add(t);
+  for (let i = 0; i < 5; i++) blob(rand(110, 160) * s, matLeaf[i % 3], x + rand(-90, 90) * s, y + rand(-90, 90) * s, (300 + rand(0, 90)) * s, 0.55);
+  OBST.push({ x, y, r: 36 * s + 2 });
 }
-for (let i = 0; i < 26; i++) {
-  const a = (i / 26) * Math.PI * 2 + rand(-.1, .1);
-  const d = rand(1350, 2100);
-  tree(Math.cos(a) * d, Math.sin(a) * d, rand(1.0, 1.6));
+function bush(x, y, s) {
+  for (let i = 0; i < 3; i++) blob(rand(28, 46) * s, matBush[i % 2], x + rand(-30, 30) * s, y + rand(-30, 30) * s, 20 * s, 0.8);
+  OBST.push({ x, y, r: 40 * s });
 }
-for (let i = 0; i < 9; i++) {
-  const a = rand(0, 7), d = rand(650, 1150), r = rand(14, 30);
-  const k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), matRock);
-  k.position.set(Math.cos(a) * d, Math.sin(a) * d, r * .45);
-  k.scale.set(1, rand(.7, 1.2), .7);
-  k.castShadow = k.receiveShadow = true;
-  world.add(k);
-  OBST.push({ x: k.position.x, y: k.position.y, r: r * 0.9 });
+for (let i = 0; i < 18; i++) {
+  const a = (i / 18) * Math.PI * 2 + rand(-.12, .12);
+  const d = rand(1250, 1750);
+  tree(Math.cos(a) * d, Math.sin(a) * d, rand(1.0, 1.4));
 }
+for (let i = 0; i < 16; i++) {
+  const a = rand(0, 6.28), d = rand(1000, 1300);
+  bush(Math.cos(a) * d, Math.sin(a) * d, rand(.9, 1.4));
+}
+tree(520, -420, 1.1);   // un arbre dans la clairiere, a contourner
+tree(-560, 320, 0.9);
 
 // =====================================================================================
 //  Personnages : squelette ValveBiped (memes os et proportions qu'un joueur GMod)
@@ -631,169 +559,74 @@ const LOOKS = {
       [-3, 0, 71, -1, .4, 2, 6], [1.5, -2, 71.6, .4, .9, 1.4, 4.5], [1.5, 2, 71.6, .4, .9, 1.4, 4.5]]) },
 };
 
+
 const hero = new Ninja(LOOKS.nara);
-hero.yaw = 30;
+hero.yaw = 20;
 const enemies = [new Ninja(LOOKS.rogue), new Ninja(LOOKS.rogue)];
-enemies[0].pos = V(620, 240, 0); enemies[1].pos = V(-380, 560, 0);
+enemies[0].pos = V(640, 260, 0); enemies[1].pos = V(-420, -520, 0);
 enemies.forEach((e, i) => { e.name = i === 0 ? "Ninja déserteur" : "Ninja déserteur (2)"; e.goal = null; e.wait = rand(0, 2); e.yaw = 200; });
 
 // =====================================================================================
-//  Effets d'ombre (memes regles que cl_fx.lua)
+//  L'ombre (meme rendu que cl_fx.lua) : bande noire nette, flaques elliptiques
 // =====================================================================================
-function inkMat(map, opts = {}) {
-  const { order, ...rest } = opts;
-  return new THREE.MeshBasicMaterial({ map, color: 0x000000, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, ...rest });
-}
-class Strip {   // geometrie dynamique : bandes au sol, faisceaux, quads
-  constructor(map, maxV, opts) {
-    this.pos = new Float32Array(maxV * 3); this.uv = new Float32Array(maxV * 2);
-    this.idx = new Uint32Array(maxV * 3);
+class Strip {
+  constructor(map, maxV, order) {
+    this.pos = new Float32Array(maxV * 3); this.uv = new Float32Array(maxV * 2); this.idx = new Uint32Array(maxV * 3);
     this.geo = new THREE.BufferGeometry();
     this.geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     this.geo.setAttribute("uv", new THREE.BufferAttribute(this.uv, 2).setUsage(THREE.DynamicDrawUsage));
     this.geo.setIndex(new THREE.BufferAttribute(this.idx, 1).setUsage(THREE.DynamicDrawUsage));
-    this.mesh = new THREE.Mesh(this.geo, inkMat(map, opts));
-    this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = opts && opts.order || 2;
+    this.mat = new THREE.MeshBasicMaterial({ map, color: 0x000000, transparent: true, opacity: 0.985, depthWrite: false,
+      side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+    this.mesh = new THREE.Mesh(this.geo, this.mat);
+    this.mesh.frustumCulled = false; this.mesh.renderOrder = order;
     world.add(this.mesh);
     this.max = maxV; this.reset();
   }
   reset() { this.nv = 0; this.ni = 0; }
   v(p, u, w) { if (this.nv >= this.max) return -1; const i = this.nv++; this.pos.set([p.x, p.y, p.z], i * 3); this.uv.set([u, w], i * 2); return i; }
-  tri(a, b, c) { if (a < 0 || b < 0 || c < 0 || this.ni + 3 > this.idx.length) return; this.idx[this.ni++] = a; this.idx[this.ni++] = b; this.idx[this.ni++] = c; }
-  quad(a, b, c, d) { this.tri(a, b, c); this.tri(a, c, d); }
+  quad(a, b, c, d) {
+    if (a < 0 || b < 0 || c < 0 || d < 0 || this.ni + 6 > this.idx.length) return;
+    this.idx.set([a, b, c, a, c, d], this.ni); this.ni += 6;
+  }
   flush() {
     this.geo.attributes.position.needsUpdate = true; this.geo.attributes.uv.needsUpdate = true; this.geo.index.needsUpdate = true;
     this.geo.setDrawRange(0, this.ni);
   }
 }
-const ribbonFringe = new Strip(TEX.ribbon, 4000, { opacity: 70 / 255, order: 2 });
-const ribbonCore = new Strip(TEX.ribbon, 4000, { opacity: 242 / 255, order: 3 });
-const poolStrip = new Strip(TEX.pool, 400, { order: 1 });
-const poolSoft = new Strip(TEX.pool, 400, { opacity: 0.36, order: 1 });
-const ringStrip = new Strip(TEX.ring, 40, { order: 1 });
-const strandStrip = new Strip(TEX.strand, 4000, { opacity: 0.96, order: 4, polygonOffset: false });
-const needleStrip = new Strip(TEX.needle, 4000, { opacity: 0.98, order: 4, polygonOffset: false });
-const handStrip = new Strip(TEX.hand, 200, { order: 5, polygonOffset: false });
-const ALL_STRIPS = [ribbonFringe, ribbonCore, poolStrip, poolSoft, ringStrip, strandStrip, needleStrip, handStrip];
+const ribbonStrip = new Strip(TEX.ribbon, 4000, 3);
+const poolStrip = new Strip(TEX.pool, 40, 2);
+const casterPoolStrip = new Strip(TEX.pool, 8, 2);
 
-function groundQuad(strip, c, r, rotDeg, alpha) {
-  if (r <= 0.05) return;
-  // l'opacite par quad est simulee : on reduit la taille du quad plutot que son alpha quand alpha < 1
-  const rr = r * (alpha < 1 ? 0.75 + 0.25 * alpha : 1);
-  const a = rad(rotDeg), ca = Math.cos(a) * rr, sa = Math.sin(a) * rr, z = c.z + 0.6;
-  const i0 = strip.v(V(c.x - ca + sa, c.y - sa - ca, z), 0, 0);
-  const i1 = strip.v(V(c.x + ca + sa, c.y + sa - ca, z), 1, 0);
-  const i2 = strip.v(V(c.x + ca - sa, c.y + sa + ca, z), 1, 1);
-  const i3 = strip.v(V(c.x - ca - sa, c.y - sa + ca, z), 0, 1);
-  strip.quad(i0, i1, i2, i3);
+function pool(strip, c, yaw, halfLen, halfWid) {
+  if (halfLen < .5) return;
+  const F = mul(fwd(yaw), halfLen), S = mul(nrm(crs(fwd(yaw), UP)), halfWid), z = V(c.x, c.y, .6);
+  const a = strip.v(sub(sub(z, F), S), 0, 0), b = strip.v(sub(add(z, F), S), 1, 0);
+  const cc = strip.v(add(add(z, F), S), 1, 1), d = strip.v(add(sub(z, F), S), 0, 1);
+  strip.quad(a, b, cc, d);
 }
 
-function ribbon(strip, pts, width, t, moving, seed) {
+// largeur constante, depart evase dans la flaque, pointe effilee en aiguille
+function ribbon(pts, width) {
   const n = pts.length;
-  if (n < 2) return 0;
+  if (n < 2) return;
   const s = [0];
   for (let i = 1; i < n; i++) s[i] = s[i - 1] + dist(pts[i], pts[i - 1]);
   const total = s[n - 1];
-  if (total < 1) return 0;
-  const headLen = Math.min(46, total * .5);
-  let prevL = -1, prevR = -1;
+  if (total < 1) return;
+  const tipLen = Math.min(C.TipLength, total * .6);
+  let pl = -1, pr = -1;
   for (let i = 0; i < n; i++) {
-    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
-    let dir = sub(b, a); dir.z = 0;
+    let dir = sub(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)]); dir.z = 0;
     dir = len(dir) < 1e-3 ? V(1, 0, 0) : nrm(dir);
     const side = crs(dir, UP);
-    const si = s[i], toTip = total - si;
-    let w = width * (1 + .10 * Math.sin(si * .09 - t * 5.5 + seed) + .06 * Math.sin(si * .23 + t * 8.3));
-    w *= Math.sqrt(clamp(toTip / headLen, 0, 1));
-    w *= 1 + .35 * (1 - clamp(si / 40, 0, 1));
-    let off = V();
-    if (moving) off = mul(side, Math.sin(t * 11 + si * .15 + seed) * 2.6 * (1 - clamp(toTip / 110, 0, 1)));
-    const c = add(add(pts[i], V(0, 0, .7)), off);
-    const u = si / 90 - t * .35;
-    const iL = strip.v(sub(c, mul(side, w)), u, 0), iR = strip.v(add(c, mul(side, w)), u, 1);
-    if (i > 0) strip.quad(prevL, iL, iR, prevR);
-    prevL = iL; prevR = iR;
-  }
-  return total;
-}
-
-// faisceau oriente vers la camera (comme render.AddBeam)
-let camSrc = V();
-function beam(strip, pts, widths, vs) {
-  let pl = -1, pr = -1;
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
-    const tg = nrm(sub(b, a));
-    let side = crs(tg, nrm(sub(camSrc, pts[i])));
-    side = len(side) < 1e-4 ? V(1, 0, 0) : nrm(side);
-    const hw = widths[i] / 2;
-    const l = strip.v(sub(pts[i], mul(side, hw)), 0, vs[i]), r = strip.v(add(pts[i], mul(side, hw)), 1, vs[i]);
-    if (i > 0) strip.quad(pl, l, r, pr);
+    let w = width * Math.pow(clamp((total - s[i]) / tipLen, 0, 1), .75);
+    w *= 1 + .6 * (1 - clamp(s[i] / 30, 0, 1));
+    const c = V(pts[i].x, pts[i].y, .7);
+    const l = ribbonStrip.v(sub(c, mul(side, w)), s[i] / 64, 0), r = ribbonStrip.v(add(c, mul(side, w)), s[i] / 64, 1);
+    if (i > 0) ribbonStrip.quad(pl, l, r, pr);
     pl = l; pr = r;
   }
-}
-
-// --- particules : fumee d'encre ---------------------------------------------------------
-const MAXP = 1400;
-const pGeo = new THREE.BufferGeometry();
-const pPos = new Float32Array(MAXP * 3), pSize = new Float32Array(MAXP), pAlpha = new Float32Array(MAXP), pRot = new Float32Array(MAXP);
-pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3).setUsage(THREE.DynamicDrawUsage));
-pGeo.setAttribute("size", new THREE.BufferAttribute(pSize, 1).setUsage(THREE.DynamicDrawUsage));
-pGeo.setAttribute("alpha", new THREE.BufferAttribute(pAlpha, 1).setUsage(THREE.DynamicDrawUsage));
-pGeo.setAttribute("rot", new THREE.BufferAttribute(pRot, 1).setUsage(THREE.DynamicDrawUsage));
-const pMat = new THREE.ShaderMaterial({
-  uniforms: { map: { value: TEX.wisp }, scale: { value: 500 } },
-  vertexShader: `attribute float size; attribute float alpha; attribute float rot; varying float vA; varying float vR;
-    uniform float scale;
-    void main(){ vA = alpha; vR = rot; vec4 mv = modelViewMatrix * vec4(position,1.0);
-      gl_PointSize = size * scale / max(1.0, -mv.z); gl_Position = projectionMatrix * mv; }`,
-  fragmentShader: `uniform sampler2D map; varying float vA; varying float vR;
-    void main(){ vec2 c = gl_PointCoord - 0.5; float cs = cos(vR), sn = sin(vR);
-      vec2 r = vec2(c.x*cs - c.y*sn, c.x*sn + c.y*cs) + 0.5;
-      float a = texture2D(map, r).a * vA; if (a < 0.01) discard; gl_FragColor = vec4(0.0,0.0,0.0,a); }`,
-  transparent: true, depthWrite: false,
-});
-const points = new THREE.Points(pGeo, pMat);
-points.frustumCulled = false; points.renderOrder = 6;
-world.add(points);
-const parts = [];
-function wisp(p, v, size, alpha, life, opts = {}) {
-  if (parts.length >= MAXP) return;
-  parts.push({ p: p.clone(), v: v.clone(), s0: size, s1: size * (opts.grow || 2.2), a0: alpha / 255, life, age: 0,
-    rot: rand(0, 6.28), dr: rand(-1.2, 1.2), g: opts.g ?? 6, drag: opts.drag ?? 40 });
-}
-function inkSplash(p, dir) {
-  for (let i = 0; i < 10; i++) wisp(p, mul(add(mul(dir, .6), V(rand(-.8, .8), rand(-.8, .8), rand(-.8, .8))), rand(60, 160)), rand(1.2, 2.6), 255, rand(.4, .8), { grow: .3, g: -380, drag: 0 });
-  for (let i = 0; i < 4; i++) wisp(p, V(rand(-20, 20), rand(-20, 20), rand(-20, 20)), rand(4, 7), 170, rand(.4, .7));
-}
-function burst(c, r, n) {
-  for (let i = 0; i < n; i++) {
-    const a = rand(0, 6.28), d = V(Math.cos(a), Math.sin(a), 0);
-    wisp(add(add(c, mul(d, r * rand(.6, 1))), V(0, 0, 2)), add(mul(d, rand(40, 110)), V(0, 0, rand(10, 40))), rand(6, 12), 190, rand(.6, 1.1));
-  }
-}
-function stepParticles(dt) {
-  let k = 0;
-  for (let i = parts.length - 1; i >= 0; i--) {
-    const q = parts[i];
-    q.age += dt;
-    if (q.age >= q.life) { parts.splice(i, 1); continue; }
-    const damp = Math.max(0, 1 - q.drag * dt / 100);
-    q.v = mul(q.v, damp); q.v.z += q.g * dt;
-    q.p = add(q.p, mul(q.v, dt));
-    if (q.p.z < 0.3) { q.p.z = 0.3; q.v.z = 0; }
-    q.rot += q.dr * dt;
-  }
-  for (const q of parts) {
-    const f = q.age / q.life;
-    pPos.set([q.p.x, q.p.y, q.p.z], k * 3);
-    pSize[k] = lerp(q.s0, q.s1, f) * 2; pAlpha[k] = q.a0 * (1 - f); pRot[k] = q.rot;
-    k++;
-  }
-  pGeo.setDrawRange(0, k);
-  for (const n of ["position", "size", "alpha", "rot"]) pGeo.attributes[n].needsUpdate = true;
 }
 
 // =====================================================================================
@@ -805,10 +638,8 @@ function initAudio() {
   if (AUDIO.ctx) return;
   try {
     AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    AUDIO.gain = AUDIO.ctx.createGain(); AUDIO.gain.gain.value = 0.8; AUDIO.gain.connect(AUDIO.ctx.destination);
-    for (const [k, v] of Object.entries(window.NARA_SND || {})) {
-      AUDIO.ctx.decodeAudioData(b64buf(v), (b) => AUDIO.buf[k] = b, () => {});
-    }
+    AUDIO.gain = AUDIO.ctx.createGain(); AUDIO.gain.gain.value = .8; AUDIO.gain.connect(AUDIO.ctx.destination);
+    for (const [k, v] of Object.entries(window.NARA_SND || {})) AUDIO.ctx.decodeAudioData(b64buf(v), (b) => AUDIO.buf[k] = b, () => {});
   } catch (e) { AUDIO.ctx = null; }
 }
 function play(name, vol = 1, rate = 1) {
@@ -823,44 +654,26 @@ function stopLoop() {
   const h = AUDIO.loop; AUDIO.loop = null;
   try { h.g.gain.setTargetAtTime(0, AUDIO.ctx.currentTime, .1); h.s.stop(AUDIO.ctx.currentTime + .5); } catch (e) {}
 }
-$("sound").addEventListener("click", () => {
+$("sound").addEventListener("click", (e) => {
   initAudio();
   AUDIO.on = !AUDIO.on;
   if (AUDIO.ctx && AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
   $("sound").textContent = AUDIO.on ? "Son : activé" : "Son : coupé";
   $("sound").setAttribute("aria-pressed", AUDIO.on);
   if (!AUDIO.on) stopLoop();
+  e.currentTarget.blur();
 });
 
 // =====================================================================================
-//  Logique de la technique (portage de sv_core.lua + cl_fx.lua, en solo)
+//  Logique (portage de sv_core.lua, en solo)
 // =====================================================================================
-let now = 0, tech = 0, cast = null, nextCast = 0;
-const view = { yaw: 30, pitch: 14, dist: 230, sYaw: 0, sPitch: 8 };
+let now = 0, cast = null, nextCast = 0, dtNow = 1 / 60;
+const view = { yaw: 20, pitch: 14, dist: 230, sYaw: 0, sPitch: 8, focus: null };
 const input = { fwd: false, back: false, left: false, right: false, stick: V(), boost: false };
 
-function selectTech(i) {
-  tech = i;
-  document.querySelectorAll(".tech").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.t === i)));
-  $("desc").textContent = TECHS[i].desc;
-}
-document.querySelectorAll(".tech").forEach((b) => b.addEventListener("click", () => { selectTech(+b.dataset.t); b.blur(); }));
-selectTech(0);
-
-function setPhase(p) {
-  const prev = cast.phase;
-  cast.phase = p; cast.t0 = now;
-  if (prev !== p) {
-    cast.morphFrom = cast.drawPts; cast.morphStart = now;
-    if (p === PH.RETRACT) { cast.retractPts = cast.drawPts; cast.retractLen = null; }
-    if (p === PH.WINDUP || p === PH.TRAVEL) { cast.ringStart = now; burst(hero.pos, C.PoolRadius * .8, 26); }
-    if (p === PH.BOUND || p === PH.CHOKE || p === PH.PIERCE) { cast.catchStart = now; cast.needles = null; if (cast.target) burst(cast.target.pos, C.TargetPool, 34); }
-  }
-}
 const pathLen = (pts) => { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i], pts[i - 1]); return L; };
 function resample(pts, n) {
   const out = [];
-  if (!pts.length) return out;
   if (pts.length === 1) { for (let i = 0; i < n; i++) out.push(pts[0]); return out; }
   const total = pathLen(pts);
   let seg = 1, acc = 0;
@@ -877,63 +690,36 @@ function groundLine(a, b, step) {
   for (let i = 0; i <= n; i++) { const p = lerpV(a, b, i / n); p.z = 0; out.push(p); }
   return out;
 }
-const alive = (e) => e && e.hp > 0;
 
-function aimTarget(range) {
-  const eye = add(hero.pos, V(0, 0, 64));
-  const aim = fwd(view.yaw, 0);
-  let best = null, bd = 0;
-  for (const e of enemies) {
-    if (!alive(e) || e.bound) continue;
-    const to = sub(e.center(), eye);
-    if (len(to) > range) continue;
-    to.z = 0;
-    const d = dot(aim, nrm(to));
-    if (d > 0.9 && d > bd) { best = e; bd = d; }
+function setPhase(p) {
+  const prev = cast.phase;
+  cast.phase = p; cast.t0 = now;
+  if (prev !== p) {
+    cast.morphFrom = cast.drawPts;
+    if (p === PH.RETRACT) { cast.retractPts = cast.drawPts; cast.retractLen = null; }
   }
-  return best;
 }
 
 function startCast() {
   initAudio();
-  if (cast) {
-    if (cast.phase === PH.BOUND && tech !== 0 && alive(cast.target)) {
-      cast.tech = tech; cast.lockYaw = yawOf(sub(cast.target.pos, hero.pos));
-      cast.target.mode = 2; cast.dmgNext = null; cast.pierced = false;
-      setPhase(tech === 1 ? PH.CHOKE : PH.PIERCE);
-      play(tech === 1 ? "choke" : "pierce", .9); play("mudra", .6);
-    }
-    return;
-  }
-  if (now < nextCast) return;
+  if (cast || now < nextCast) return;
   const feet = V(hero.pos.x, hero.pos.y, 0);
-  if (tech === 0) {
-    cast = { tech: 0, path: [feet], tip: feet, tipYaw: view.yaw, lockYaw: view.yaw, length: 0, seed: rand(0, 100) };
-    hero.yaw = view.yaw;
-    view.sYaw = view.yaw; view.sPitch = 8;
-    setPhase(PH.WINDUP);
-    setTimeout(() => { if (cast && cast.phase === PH.WINDUP) play("mudra", .9); }, 320);
-    try { if (matchMedia("(pointer: fine)").matches && renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); } catch (e) {}
-  } else {
-    const tg = aimTarget(tech === 1 ? C.ChokeRange : C.NuiRange);
-    if (!tg) { flashTip("Aucune cible à portée : tourne la caméra vers un ninja."); return; }
-    const route = groundLine(feet, V(tg.pos.x, tg.pos.y, 0), 10);
-    cast = { tech, path: [feet], route, routeLen: pathLen(route), travel: 0, target: tg, lockYaw: yawOf(sub(tg.pos, hero.pos)), seed: rand(0, 100) };
-    hero.yaw = cast.lockYaw;
-    tg.bound = true; tg.mode = 2;
-    setPhase(PH.TRAVEL);
-    play("mudra", .8); play("cast", .8, 1.15);
-  }
+  cast = { path: [feet], tip: feet, tipYaw: view.yaw, lockYaw: view.yaw, length: 0 };
+  hero.yaw = view.yaw;
+  view.sYaw = view.yaw; view.sPitch = 16;
+  setPhase(PH.WINDUP);
+  setTimeout(() => { if (cast && cast.phase === PH.WINDUP) play("mudra", .9); }, 320);
+  try { if (matchMedia("(pointer: fine)").matches && canvas.requestPointerLock) canvas.requestPointerLock(); } catch (e) {}
 }
 function cancelCast() {
   if (!cast) return;
-  if (cast.phase === PH.WINDUP) { cast = null; nextCast = now + .3; return; }
+  if (cast.phase === PH.WINDUP) { cast = null; nextCast = now + .3; if (document.pointerLockElement) document.exitPointerLock(); return; }
   retract();
 }
-function freeTarget() { if (cast && cast.target) { cast.target.bound = false; cast.target.mode = 0; } }
 function retract() {
   if (!cast || cast.phase === PH.RETRACT) return;
-  stopLoop(); freeTarget();
+  stopLoop();
+  if (cast.target) cast.target.bound = false;
   let L = pathLen(cast.path);
   if (cast.target) L = Math.max(L, dist(hero.pos, cast.target.pos));
   cast.retractEnd = now + L / C.RetractSpeed + .25;
@@ -948,13 +734,13 @@ function moveTip(dir, step) {
     const d = V(want.x - o.x, want.y - o.y, 0), r = o.r + 4;
     if (len(d) < r) {
       const n = nrm(d.x || d.y ? d : V(1, 0, 0));
-      let slide = sub(dir, mul(n, dot(dir, n))); slide.z = 0;
+      const slide = sub(dir, mul(n, dot(dir, n))); slide.z = 0;
       if (len(slide) < .2) return false;
-      want = add(cast.tip, mul(nrm(slide), step * len(slide)));
+      want = add(cast.tip, mul(slide, step));
       if (Math.hypot(want.x - o.x, want.y - o.y) < r) want = add(V(o.x, o.y, 0), mul(n, r));
     }
   }
-  if (Math.hypot(want.x, want.y) > 2600) return false;
+  if (Math.hypot(want.x, want.y) > 2400) return false;
   want.z = 0;
   cast.tip = want;
   return true;
@@ -962,26 +748,26 @@ function moveTip(dir, step) {
 
 function tickCast(dt) {
   const el = now - cast.t0;
-  const p = cast.phase;
-  if (p === PH.WINDUP) {
+  if (cast.phase === PH.WINDUP) {
     if (el >= C.WindupTime) { setPhase(PH.STEER); play("cast", .9); startLoop(); }
-  } else if (p === PH.STEER) {
-    const diff = angDiff(view.sYaw, cast.tipYaw), mt = C.TurnRate * dt;
-    cast.tipYaw += clamp(diff, -mt, mt);
-    const speed = input.fwd || input.boost ? C.BoostSpeed : input.back ? C.SlowSpeed : C.ShadowSpeed;
-    if (AUDIO.loop) AUDIO.loop.s.playbackRate.value = input.fwd || input.boost ? 1.18 : 1;
+  } else if (cast.phase === PH.STEER) {
+    const mt = C.TurnRate * dt;
+    cast.tipYaw += clamp(angDiff(view.sYaw, cast.tipYaw), -mt, mt);
+    const fast = input.fwd || input.boost;
+    const speed = fast ? C.BoostSpeed : input.back ? C.SlowSpeed : C.ShadowSpeed;
+    if (AUDIO.loop) AUDIO.loop.s.playbackRate.value = fast ? 1.18 : 1;
     if (cast.length < C.MaxLength) {
       const before = cast.tip;
       if (moveTip(fwd(cast.tipYaw), speed * dt)) cast.length += dist(cast.tip, before);
     }
     if (dist(cast.tip, cast.path[cast.path.length - 1]) >= 7) cast.path.push(cast.tip);
     for (const e of enemies) {
-      if (alive(e) && !e.bound && dist2D(e.pos, cast.tip) <= C.CatchRadius + 10) {
+      if (!e.bound && dist2D(e.pos, cast.tip) <= C.CatchRadius + 10) {
         cast.path.push(cast.tip);
         stopLoop();
-        cast.target = e; e.bound = true; e.mode = 1;
-        cast.heroYaw0 = hero.yaw = yawOf(sub(e.pos, hero.pos));
-        e.yaw = yawOf(sub(hero.pos, e.pos)); cast.targetYaw0 = e.yaw;
+        cast.target = e; e.bound = true;
+        hero.yaw = yawOf(sub(e.pos, hero.pos));
+        e.yaw = yawOf(sub(hero.pos, e.pos));
         setPhase(PH.BOUND);
         play("bind", 1);
         if (document.pointerLockElement) document.exitPointerLock();
@@ -990,35 +776,9 @@ function tickCast(dt) {
       }
     }
     if (el >= C.SteerTime) retract();
-  } else if (p === PH.TRAVEL) {
-    if (!alive(cast.target)) return retract();
-    cast.travel = Math.min(cast.routeLen, cast.travel + C.TravelSpeed * dt);
-    let acc = pathLen(cast.path), i = cast.path.length - 1;
-    while (i < cast.route.length - 1) {
-      const seg = dist(cast.route[i + 1], cast.route[i]);
-      if (acc + seg > cast.travel) break;
-      acc += seg; i++; cast.path.push(cast.route[i]);
-    }
-    if (cast.travel >= cast.routeLen) {
-      setPhase(cast.tech === 1 ? PH.CHOKE : PH.PIERCE);
-      play(cast.tech === 1 ? "choke" : "pierce", .9);
-    }
-  } else if (p === PH.BOUND || p === PH.CHOKE || p === PH.PIERCE) {
-    const t = cast.target;
-    if (!alive(t)) return retract();
-    if (p === PH.BOUND) { if (el >= C.PossessTime) retract(); }
-    else if (p === PH.CHOKE) {
-      if (el >= C.ChokeClimbTime) {
-        if (cast.dmgNext == null) cast.dmgNext = now;
-        if (now >= cast.dmgNext) { cast.dmgNext = now + .25; t.hp -= C.ChokeDPS * .25; }
-      }
-      if (el >= C.ChokeClimbTime + C.ChokeTime) retract();
-    } else {
-      if (!cast.pierced && el >= .17) { cast.pierced = true; t.hp -= C.NuiDamage; }
-      if (el >= C.NuiHoldTime + .2) retract();
-    }
-    if (t.hp <= 0) { t.hp = 0; t.deadAt = now; }
-  } else if (p === PH.RETRACT) {
+  } else if (cast.phase === PH.BOUND) {
+    if (el >= C.PossessTime) retract();
+  } else if (cast.phase === PH.RETRACT) {
     if (now >= cast.retractEnd) { cast = null; nextCast = now + C.Cooldown; }
   }
 }
@@ -1026,18 +786,14 @@ function tickCast(dt) {
 // --- ligne affichee (meme logique que CurrentLine dans cl_fx.lua) ---------------------
 function currentLine() {
   const p = cast.phase;
-  if (p === PH.STEER || p === PH.TRAVEL) {
+  if (p === PH.STEER) {
     const path = cast.path;
-    if (path.length < 2) return path.length ? [path[0], path[0]] : null;
-    const last = p === PH.STEER ? cast.tip : path[path.length - 1];
-    cast.tipDisp = cast.tipDisp ? lerpV(cast.tipDisp, last, Math.min(1, dt60 * 14)) : last;
-    const pts = path.slice();
-    pts.push(cast.tipDisp);
-    return pts;
+    cast.tipDisp = cast.tipDisp ? lerpV(cast.tipDisp, cast.tip, Math.min(1, dtNow * 14)) : cast.tip;
+    return [...path, cast.tipDisp];
   }
-  if (p === PH.BOUND || p === PH.CHOKE || p === PH.PIERCE) {
+  if (p === PH.BOUND) {
     const link = groundLine(V(hero.pos.x, hero.pos.y, 0), V(cast.target.pos.x, cast.target.pos.y, 0), 14);
-    const k = cast.morphFrom ? ease((now - cast.morphStart) / .55) : 1;
+    const k = cast.morphFrom ? ease((now - cast.t0) / .55) : 1;
     if (k >= 1 || !cast.morphFrom || cast.morphFrom.length < 2) return link;
     const n = Math.max(link.length, 24), a = resample(cast.morphFrom, n), b = resample(link, n);
     return a.map((q, i) => lerpV(q, b[i], k));
@@ -1048,8 +804,7 @@ function currentLine() {
     if (cast.retractLen == null) cast.retractLen = pathLen(src);
     const left = cast.retractLen - C.RetractSpeed * (now - cast.t0);
     if (left <= 2) return null;
-    const s2 = [V(hero.pos.x, hero.pos.y, 0), ...src.slice(1)];
-    const out = [s2[0]];
+    const s2 = [V(hero.pos.x, hero.pos.y, 0), ...src.slice(1)], out = [s2[0]];
     let acc = 0;
     for (let i = 1; i < s2.length; i++) {
       const l = dist(s2[i], s2[i - 1]);
@@ -1061,147 +816,32 @@ function currentLine() {
   return null;
 }
 
-function feelers(pts, t, seed) {
-  if (pts.length < 3) return;
-  const tip = pts[pts.length - 1];
-  let dir = sub(tip, pts[Math.max(0, pts.length - 4)]); dir.z = 0;
-  if (len(dir) < .05) return;
-  dir = nrm(dir);
-  const side = crs(dir, UP);
-  for (const k of [-1, 1]) {
-    // bande a plat sur le sol (comme la bande principale), pas tournee vers la camera
-    let pl = -1, pr = -1;
-    for (let j = 0; j <= 5; j++) {
-      const f = j / 5, sway = Math.sin(t * 9 + k * 1.7 + f * 3 + seed) * 4 * f;
-      const p = add(add(add(sub(tip, mul(dir, 8)), mul(dir, f * 16)), mul(side, k * (2.5 + 5 * f) + sway)), V(0, 0, .9));
-      const w = 2.2 * (1 - f) + .2;
-      const l = strandStrip.v(sub(p, mul(side, w)), 0, f * 2), r = strandStrip.v(add(p, mul(side, w)), 1, f * 2);
-      if (j > 0) strandStrip.quad(pl, l, r, pr);
-      pl = l; pr = r;
-    }
-  }
-}
-
-function drawChoke(t, el) {
-  const tg = cast.target;
-  const feet = V(tg.pos.x, tg.pos.y, 0), neck = tg.neck();
-  let axis = sub(neck, feet); const height = len(axis); axis = nrm(axis);
-  const e1 = nrm(crs(axis, Math.abs(axis.z) > .9 ? V(1, 0, 0) : UP)), e2 = nrm(crs(axis, e1));
-  const climb = easeOut(el / C.ChokeClimbTime);
-  const squeeze = el > C.ChokeClimbTime ? .85 + .15 * Math.sin(t * 14) : 1;
-  const N = C.ChokeTendrils;
-  for (let i = 1; i <= N; i++) {
-    const th0 = (i / N) * Math.PI * 2 + cast.seed * .1, spiral = 1.6 + .4 * Math.sin(i * 1.7);
-    const P = (h) => { const th = th0 + spiral * h; const r = lerp(15, 4.6 * squeeze, h) * (1 + .08 * Math.sin(t * 5 + i + h * 6));
-      return [add(add(feet, mul(axis, h * height)), mul(add(mul(e1, Math.cos(th)), mul(e2, Math.sin(th))), r)), th]; };
-    const hmax = clamp(climb * (.94 + .06 * Math.sin(i)), .02, 1);
-    const ps = [], ws = [], vs = [];
-    for (let k = 0; k <= 18; k++) { const h = hmax * k / 18; ps.push(P(h)[0]); ws.push(lerp(7, 3.2, k / 18)); vs.push(h * 3 - t * .6); }
-    beam(strandStrip, ps, ws, vs);
-    const [hp, th] = P(hmax), hp2 = P(Math.max(0, hmax - .04))[0];
-    const tang = nrm(sub(hp, hp2)), out = add(mul(e1, Math.cos(th)), mul(e2, Math.sin(th)));
-    const right = nrm(crs(tang, out));
-    const hs = el > C.ChokeClimbTime ? 7.5 : 9.5;
-    const c = add(add(hp, mul(tang, hs * .55)), mul(out, .6));
-    const q = (sr, st) => add(add(c, mul(right, sr * hs * .5)), mul(tang, st * hs * .6));
-    const a = handStrip.v(q(-1, -1), 0, 1), b = handStrip.v(q(-1, 1), 0, 0), cc = handStrip.v(q(1, 1), 1, 0), d = handStrip.v(q(1, -1), 1, 1);
-    handStrip.quad(a, b, cc, d);
-  }
-}
-
-const NUI_BONES = ["Spine2", "Spine4", "Pelvis", "R_UpperArm", "L_UpperArm", "R_Thigh", "L_Thigh", "R_Forearm", "L_Forearm", "R_Calf", "L_Calf"];
-function drawNeedles(t, el) {
-  const tg = cast.target;
-  if (!cast.needles) {
-    cast.needles = [];
-    const line = cast.drawPts;
-    for (let i = 1; i <= C.NuiNeedles; i++) {
-      let g;
-      if (line && line.length > 4 && i % 3 === 0) g = line[Math.max(0, line.length - 1 - Math.floor(rand(2, Math.min(line.length - 1, 10))))];
-      else { const a = rand(0, 6.28), d = rand(28, 70); g = V(tg.pos.x + Math.cos(a) * d, tg.pos.y + Math.sin(a) * d, 0); }
-      cast.needles.push({ g, bone: NUI_BONES[(i - 1) % NUI_BONES.length], jit: V(rand(-3, 3), rand(-3, 3), rand(-4, 4)), delay: (i - 1) * .012, lift: rand(.25, .6) });
-    }
-  }
-  for (const nd of cast.needles) {
-    const hit = add(tg.bone(nd.bone), nd.jit);
-    let grow = easeOut((el - nd.delay) / .16);
-    if (el > C.NuiHoldTime) grow *= 1 - ease((el - C.NuiHoldTime) / .3);
-    if (grow <= .01) continue;
-    const dvec = sub(hit, nd.g), dd = len(dvec), dir = nrm(dvec);
-    const tipEnd = add(hit, mul(dir, 9)), ctrl = add(add(nd.g, mul(UP, dd * nd.lift)), mul(dvec, .15));
-    const ps = [], ws = [], vs = [];
-    for (let k = 0; k <= 10; k++) {
-      const f = (k / 10) * grow;
-      ps.push(lerpV(lerpV(nd.g, ctrl, f), lerpV(ctrl, tipEnd, f), f)); ws.push(lerp(5.5, .35, k / 10)); vs.push(f);
-    }
-    beam(needleStrip, ps, ws, vs);
-    groundQuad(poolStrip, nd.g, 7 * grow, nd.delay * 900, 1);
-    if (grow > .98 && !nd.splashed) { nd.splashed = true; inkSplash(hit, dir); }
-  }
-}
-
-function emitAlong(pts, dt) {
-  const moving = cast.phase === PH.STEER || cast.phase === PH.TRAVEL;
-  cast.accTip = (cast.accTip || 0) + dt * (moving ? 46 : 0);
-  cast.accEdge = (cast.accEdge || 0) + dt * Math.min(60, pts.length * .6);
-  const tip = pts[pts.length - 1];
-  while (cast.accTip >= 1) { cast.accTip--; wisp(add(tip, V(rand(-5, 5), rand(-5, 5), 2 + rand(-2, 3))), V(rand(-9, 9), rand(-9, 9), rand(8, 24)), rand(4, 8), 150, rand(.5, 1)); }
-  while (cast.accEdge >= 1) {
-    cast.accEdge--;
-    const q = pts[Math.floor(rand(0, pts.length))];
-    wisp(add(q, V(rand(-1, 1) * C.Width * .8, rand(-1, 1) * C.Width * .8, 1.5)), V(rand(-4, 4), rand(-4, 4), rand(4, 14)), rand(3.5, 6.5), 95, rand(.7, 1.3));
-  }
-}
-
-function poolAlpha() {
-  const p = cast.phase, el = now - cast.t0;
-  if (p === PH.WINDUP || p === PH.TRAVEL) return ease(el / .45);
-  if (p === PH.RETRACT) return 1 - ease((el - (cast.retractLen || 0) / C.RetractSpeed) / .3);
-  return 1;
-}
-
-function drawShadows(t, dt) {
-  for (const s of ALL_STRIPS) s.reset();
+function drawShadows() {
+  ribbonStrip.reset(); poolStrip.reset(); casterPoolStrip.reset();
   if (cast) {
-    const feet = V(hero.pos.x, hero.pos.y, 0);
-    if (cast.ringStart != null) {
-      const k = (now - cast.ringStart) / .75;
-      if (k < 1) groundQuad(ringStrip, feet, lerp(12, 120, easeOut(k)), cast.seed * 3, 1 - k);
-    }
-    const pa = poolAlpha();
+    const el = now - cast.t0;
+    let pa = 1;
+    if (cast.phase === PH.WINDUP) pa = ease(el / .4);
+    if (cast.phase === PH.RETRACT) pa = 1 - ease((el - (cast.retractLen || 0) / C.RetractSpeed) / .3);
+    casterPoolStrip.mat.opacity = .985 * pa;
     if (pa > .01) {
-      const grow = cast.phase === PH.WINDUP ? easeOut((now - cast.t0) / .6) : 1;
-      const r = C.PoolRadius * grow * (1 + .04 * Math.sin(t * 3 + cast.seed)) * pa;
-      groundQuad(poolSoft, feet, r * 1.45, t * 4 * 57 + cast.seed, 1);
-      groundQuad(poolStrip, feet, r, -t * 6 * 57 + cast.seed * 2, 1);
+      const grow = cast.phase === PH.WINDUP ? easeOut(el / .6) : 1;
+      const c = add(V(hero.pos.x, hero.pos.y, 0), mul(fwd(cast.lockYaw), C.PoolForward * grow));
+      pool(casterPoolStrip, c, cast.lockYaw, C.PoolLength * grow, C.PoolWidth * grow);
     }
     const line = currentLine();
     cast.drawPts = line || cast.drawPts;
-    const moving = cast.phase === PH.STEER || cast.phase === PH.TRAVEL;
-    if (line && line.length >= 2) {
-      ribbon(ribbonFringe, line, C.Width * 1.7, t, moving, cast.seed);
-      ribbon(ribbonCore, line, C.Width, t, moving, cast.seed);
-      if (moving) feelers(line, t, cast.seed);
-      emitAlong(line, dt);
-    }
-    const linked = cast.phase === PH.BOUND || cast.phase === PH.CHOKE || cast.phase === PH.PIERCE;
-    if (cast.target && linked) {
-      const tf = V(cast.target.pos.x, cast.target.pos.y, 0);
-      const k = easeOut((now - cast.catchStart) / .35);
-      groundQuad(poolSoft, tf, C.TargetPool * 1.4 * k, t * 5 * 57, 1);
-      groundQuad(poolStrip, tf, C.TargetPool * k, -t * 7 * 57 + cast.seed, 1);
-      if (cast.phase === PH.CHOKE) {
-        drawChoke(t, now - cast.t0);
-        cast.accChoke = (cast.accChoke || 0) + dt * 20;
-        while (cast.accChoke >= 1) { cast.accChoke--; wisp(add(lerpV(tf, cast.target.neck(), rand(0, 1)), V(rand(-8, 8), rand(-8, 8), rand(-8, 8))), V(0, 0, rand(6, 16)), rand(3, 6), 120, rand(.5, .9)); }
-      } else if (cast.phase === PH.PIERCE) drawNeedles(t, now - cast.t0);
+    if (line && line.length >= 2) ribbon(line, C.Width);
+    if (cast.phase === PH.BOUND) {
+      const k = easeOut(el / .35);
+      pool(poolStrip, cast.target.pos, 0, C.TargetPool * k, C.TargetPool * k);
     }
   }
-  for (const s of ALL_STRIPS) s.flush();
+  ribbonStrip.flush(); poolStrip.flush(); casterPoolStrip.flush();
 }
 
 // =====================================================================================
-//  Camera
+//  Camera (portage de cl_view.lua)
 // =====================================================================================
 const cam = { last: null, shadow: null, leave: null, dir: null, roll: 0, prevYaw: 0 };
 function setCam(pos, look, fov, roll = 0) {
@@ -1213,41 +853,36 @@ function setCam(pos, look, fov, roll = 0) {
 }
 function orbitCam() {
   const target = add(view.focus ? view.focus.pos : hero.pos, V(0, 0, 44));
-  const dir = fwd(view.yaw, view.pitch);
-  let pos = sub(target, mul(dir, view.dist));
+  const pos = sub(target, mul(fwd(view.yaw, view.pitch), view.dist));
   pos.z = Math.max(pos.z, 8);
   return { pos, look: target, fov: 55 };
 }
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function updateCamera(dt) {
   const base = orbitCam();
-  if (cast && cast.tech === 0 && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)) {
-    const el = now - cast.t0;
-    const F = fwd(cast.lockYaw), Rt = crs(F, UP);
-    const cinePos = add(add(add(hero.pos, mul(F, 78)), mul(Rt, 52)), V(0, 0, 38));
-    const cineLook = add(hero.pos, V(0, 0, 30));
+  if (cast && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)) {
+    const el = now - cast.t0, F = fwd(cast.lockYaw), Rt = crs(F, UP);
     if (cast.phase === PH.WINDUP) {
-      const k = ease(el / .35);
-      const from = cam.lastOrbit || base;
-      const pos = lerpV(from.pos, cinePos, k), look = lerpV(from.look, cineLook, k), fov = lerp(from.fov, 70, k);
-      cam.last = { pos, look, fov };
-      return setCam(pos, look, fov);
+      // plan de 3/4 face pendant le sceau
+      const cinePos = add(add(add(hero.pos, mul(F, 78)), mul(Rt, 52)), V(0, 0, 38)), cineLook = add(hero.pos, V(0, 0, 30));
+      const k = ease(el / .35), from = cam.lastOrbit || base;
+      cam.last = { pos: lerpV(from.pos, cinePos, k), look: lerpV(from.look, cineLook, k), fov: lerp(from.fov, 70, k) };
+      return setCam(cam.last.pos, cam.last.look, cam.last.fov);
     }
-    const pts = cast.drawPts;
-    if (!pts || pts.length < 2) return;
+    const pts = cast.drawPts || cast.path;
     const tip = pts[pts.length - 1];
     let dir = sub(tip, pts[Math.max(0, pts.length - 5)]); dir.z = 0;
     dir = len(dir) < .05 ? fwd(cast.tipYaw) : nrm(dir);
     cam.dir = cam.dir ? nrm(lerpV(cam.dir, dir, Math.min(1, dt * 8))) : dir;
     let pos = add(add(tip, V(0, 0, C.CamHeight)), mul(cam.dir, -C.CamBack));
-    pos.z += Math.sin(now * 7) * .4;
     const yawSpeed = angDiff(view.sYaw, cam.prevYaw) / Math.max(dt, .001);
     cam.prevYaw = view.sYaw;
-    cam.roll = lerp(cam.roll, clamp(-yawSpeed * .02, -7, 7), Math.min(1, dt * 6));
+    cam.roll = lerp(cam.roll, clamp(-yawSpeed * .02, -6, 6), Math.min(1, dt * 6));
     let look = add(pos, mul(fwd(view.sYaw, view.sPitch), 100));
-    let fov = C.CamFOV, roll = reduceMotion ? 0 : cam.roll + Math.sin(now * 2.1) * .6;
+    let fov = C.CamFOV, roll = reduceMotion ? 0 : cam.roll;
     const k = ease(el / C.CamDiveTime);
     if (k < 1 && cam.last) {
+      // plongee en arc vers la pointe de l'ombre
       const mid = add(lerpV(cam.last.pos, pos, .5), V(0, 0, 40));
       pos = lerpV(lerpV(cam.last.pos, mid, k), lerpV(mid, pos, k), k);
       look = lerpV(cam.last.look, look, k); fov = lerp(cam.last.fov, fov, k); roll *= k;
@@ -1288,22 +923,18 @@ canvas.addEventListener("pointerup", endDrag);
 canvas.addEventListener("pointercancel", endDrag);
 canvas.addEventListener("wheel", (e) => { view.dist = clamp(view.dist * (1 + e.deltaY * .001), 110, 520); e.preventDefault(); }, { passive: false });
 function look(dx, dy) {
-  const touch = matchMedia("(pointer: coarse)").matches ? 1.5 : 1;
-  if (cast && cast.tech === 0 && cast.phase === PH.STEER) {
-    view.sYaw -= dx * .22 * touch;
-    view.sPitch = clamp(view.sPitch + dy * .18 * touch, C.CamPitchMin, C.CamPitchMax);
-  } else if (!(cast && cast.tech === 0 && cast.phase === PH.WINDUP)) {
-    view.yaw -= dx * .3 * touch;
-    view.pitch = clamp(view.pitch + dy * .2 * touch, -5, 70);
+  const k = matchMedia("(pointer: coarse)").matches ? 1.5 : 1;
+  if (cast && cast.phase === PH.STEER) {
+    view.sYaw -= dx * .22 * k;
+    view.sPitch = clamp(view.sPitch + dy * .18 * k, C.CamPitchMin, C.CamPitchMax);
+  } else if (!(cast && cast.phase === PH.WINDUP)) {
+    view.yaw -= dx * .3 * k;
+    view.pitch = clamp(view.pitch + dy * .2 * k, -5, 70);
   }
 }
 const KEYS = { KeyW: "fwd", KeyS: "back", KeyA: "left", KeyD: "right", ArrowUp: "fwd", ArrowDown: "back", ArrowLeft: "left", ArrowRight: "right" };
 addEventListener("keydown", (e) => {
   if (KEYS[e.code]) { input[KEYS[e.code]] = true; e.preventDefault(); }
-  if (e.code === "Digit1" || e.code === "Numpad1") selectTech(0);
-  if (e.code === "Digit2" || e.code === "Numpad2") selectTech(1);
-  if (e.code === "Digit3" || e.code === "Numpad3") selectTech(2);
-  if (e.code === "KeyR") selectTech((tech + 1) % 3);
   if ((e.code === "Space" || e.code === "Enter") && !e.repeat) { startCast(); e.preventDefault(); }
   if (e.code === "Escape") cancelCast();
 });
@@ -1323,72 +954,52 @@ function moveStick(e) {
   const r = stick.getBoundingClientRect();
   let x = (e.clientX - r.left - r.width / 2) / (r.width / 2), y = (e.clientY - r.top - r.height / 2) / (r.height / 2);
   const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
-  input.stick = V(-y, -x, 0);   // avant = haut du joystick, gauche = gauche
+  input.stick = V(-y, -x, 0);
   knob.style.transform = `translate(${x * 34}px, ${y * 34}px)`;
 }
-let tipTimer = 0;
-function flashTip(text) { const t = $("tip"); t.textContent = text; t.style.opacity = 1; tipTimer = 3; t.style.display = "block"; }
 
 // =====================================================================================
-//  Monde : deplacements du heros et des ninjas
+//  Monde : le heros marche, les ninjas errent, la cible prise imite le heros
 // =====================================================================================
-function moveInput() {
+function blocked(p) {
+  for (const o of OBST) if (Math.hypot(p.x - o.x, p.y - o.y) < o.r + 12) return true;
+  return Math.hypot(p.x, p.y) > 1150;
+}
+function stepWorld(dt) {
+  const frozen = cast && (cast.phase === PH.WINDUP || cast.phase === PH.STEER);
   let f = (input.fwd ? 1 : 0) - (input.back ? 1 : 0) + input.stick.x;
   let s = (input.left ? 1 : 0) - (input.right ? 1 : 0) + input.stick.y;
   const l = Math.hypot(f, s); if (l > 1) { f /= l; s /= l; }
-  return { f, s };
-}
-function blocked(p) {
-  for (const o of OBST) if (Math.hypot(p.x - o.x, p.y - o.y) < o.r + 12) return true;
-  return Math.hypot(p.x, p.y) > 2300;
-}
-function stepWorld(dt) {
-  const frozen = cast && [PH.WINDUP, PH.STEER, PH.TRAVEL, PH.CHOKE, PH.PIERCE].includes(cast.phase);
-  const mi = moveInput();
-  let heroMoved = 0;
-  if (!frozen && (Math.abs(mi.f) > .05 || Math.abs(mi.s) > .05)) {
+  let moved = 0;
+  if (!frozen && (Math.abs(f) > .05 || Math.abs(s) > .05)) {
     const speed = 150;
     if (cast && cast.phase === PH.BOUND) {
-      // possession : le heros se deplace sans tourner, la cible fait le meme mouvement dans son propre repere
-      const F = fwd(hero.yaw), L = fwd(hero.yaw + 90);
-      const d = add(mul(F, mi.f * speed * dt), mul(L, mi.s * speed * dt));
-      const np = add(hero.pos, d);
-      if (!blocked(np)) hero.pos = np;
+      // possession : le heros se deplace sans tourner, la cible fait le meme pas dans son propre repere
+      const hp = add(hero.pos, add(mul(fwd(hero.yaw), f * speed * dt), mul(fwd(hero.yaw + 90), s * speed * dt)));
+      if (!blocked(hp)) hero.pos = hp;
       const t = cast.target;
-      const tF = fwd(t.yaw), tL = fwd(t.yaw + 90);
-      const tp = add(t.pos, add(mul(tF, mi.f * speed * dt), mul(tL, mi.s * speed * dt)));
+      const tp = add(t.pos, add(mul(fwd(t.yaw), f * speed * dt), mul(fwd(t.yaw + 90), s * speed * dt)));
       if (!blocked(tp)) t.pos = tp;
       t.walk += dt * 9; t.walkAmt = lerp(t.walkAmt, 1, Math.min(1, dt * 8));
     } else {
-      const F = fwd(view.yaw), L = fwd(view.yaw + 90);
-      const d = add(mul(F, mi.f), mul(L, mi.s));
+      const d = add(mul(fwd(view.yaw), f), mul(fwd(view.yaw + 90), s));
       const np = add(hero.pos, mul(nrm(d), speed * dt * Math.min(1, len(d))));
       if (!blocked(np)) hero.pos = np;
       hero.yaw += angDiff(yawOf(d), hero.yaw) * Math.min(1, dt * 10);
     }
-    heroMoved = 1;
+    moved = 1;
     hero.walk += dt * 9;
   }
-  hero.walkAmt = lerp(hero.walkAmt, heroMoved, Math.min(1, dt * 8));
-  if (cast && frozen) hero.yaw = cast.lockYaw;
+  hero.walkAmt = lerp(hero.walkAmt, moved, Math.min(1, dt * 8));
+  if (frozen) hero.yaw = cast.lockYaw;
 
   for (const e of enemies) {
-    if (e.hp <= 0) {
-      e.fall = Math.min(1, e.fall + dt * 1.8);
-      e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 8));
-      if (now - e.deadAt > 5 && !(cast && cast.target === e)) { e.hp = 100; e.fall = 0; e.pos = V(rand(-700, 700), rand(-700, 700), 0); }
-      continue;
-    }
     if (e.bound) {
-      if (!(cast && cast.phase === PH.BOUND && heroMoved)) e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 10));
+      if (!moved) e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 10));
       continue;
     }
     if (e.wait > 0) { e.wait -= dt; e.walkAmt = lerp(e.walkAmt, 0, Math.min(1, dt * 6)); continue; }
-    if (!e.goal || dist2D(e.pos, e.goal) < 20) {
-      e.goal = V(rand(-900, 900), rand(-900, 900), 0);
-      e.wait = rand(.6, 2.2);
-      continue;
-    }
+    if (!e.goal || dist2D(e.pos, e.goal) < 20) { e.goal = V(rand(-850, 850), rand(-850, 850), 0); e.wait = rand(.6, 2.2); continue; }
     const d = nrm(sub(e.goal, e.pos));
     const np = add(e.pos, mul(d, 88 * dt));
     if (blocked(np)) { e.goal = null; continue; }
@@ -1396,15 +1007,13 @@ function stepWorld(dt) {
     e.yaw += angDiff(yawOf(d), e.yaw) * Math.min(1, dt * 4);
     e.walk += dt * 6.5; e.walkAmt = lerp(e.walkAmt, 1, Math.min(1, dt * 5));
   }
-}
 
-function updateWeights(dt) {
-  const wantK = cast && ((cast.tech === 0 && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)) || (cast.tech === 1 && (cast.phase === PH.TRAVEL || cast.phase === PH.CHOKE)));
-  const wantA = cast && [PH.WINDUP, PH.STEER, PH.TRAVEL, PH.BOUND, PH.CHOKE, PH.PIERCE].includes(cast.phase);
+  const wantK = cast && (cast.phase === PH.WINDUP || cast.phase === PH.STEER);
+  const wantA = cast && cast.phase !== PH.RETRACT;
   hero.wKneel = lerp(hero.wKneel, wantK ? 1 : 0, Math.min(1, dt * 7));
   hero.wArms = lerp(hero.wArms, wantA ? 1 : 0, Math.min(1, dt * 9));
   for (const e of enemies) {
-    // la cible prise par Kagemane copie aussi le sceau du lanceur
+    // la cible prise copie aussi le sceau du lanceur
     const mimic = cast && cast.target === e && cast.phase === PH.BOUND;
     e.wArms = lerp(e.wArms, mimic ? hero.wArms : 0, Math.min(1, dt * 6));
   }
@@ -1417,54 +1026,40 @@ const count = $("count"), cNum = $("countNum"), cBar = $("countBar"), cLbl = $("
 let lastSec = null;
 function showCount(total, left, label, hint, appear) {
   count.style.opacity = appear;
-  const secs = Math.max(0, Math.ceil(left));
-  if (cNum.textContent !== String(secs)) cNum.textContent = secs;
-  const sub = left - Math.floor(left);
-  cNum.style.transform = `scale(${1 + .18 * Math.max(0, sub - .82) / .18})`;
+  const secs = String(Math.max(0, Math.ceil(left)));
+  if (cNum.textContent !== secs) cNum.textContent = secs;
+  const fr = left - Math.floor(left);
+  cNum.style.transform = `scale(${1 + .18 * Math.max(0, fr - .82) / .18})`;
   cBar.style.transform = `scaleX(${clamp(left / total, 0, 1)})`;
   count.classList.toggle("urgent", left <= 3);
   cLbl.textContent = label; cHint.textContent = hint;
 }
-function updateHUD(dt) {
-  const touch = matchMedia("(pointer: coarse)").matches;
-  let shown = false;
-  if (cast && cast.tech === 0 && cast.phase === PH.STEER) {
+function updateHUD() {
+  const steer = cast && cast.phase === PH.STEER;
+  if (steer) {
     const left = C.SteerTime - (now - cast.t0);
-    showCount(C.SteerTime, left, "影真似の術 · Kagemane no Jutsu", touch ? "" :
-      "Souris : diriger l'ombre · Z : accélérer · S : ralentir · Clic droit : annuler", ease((now - cast.t0 - C.CamDiveTime * .6) / .3));
+    showCount(C.SteerTime, left, "Kagemane no Jutsu", "Souris : diriger l'ombre · Z : accélérer · S : ralentir · Clic droit : annuler",
+      ease((now - cast.t0 - C.CamDiveTime * .6) / .3));
     const s = Math.ceil(left);
     if (s <= 5 && s > 0 && s !== lastSec) { lastSec = s; play("tick", .7); }
-    shown = true;
   } else lastSec = null;
   if (cast && cast.phase === PH.BOUND) {
-    showCount(C.PossessTime, C.PossessTime - (now - cast.t0), "Possession réussie", "La cible imite tes mouvements · Choisis 2 ou 3 puis Lancer pour enchaîner", ease((now - cast.t0) / .3));
-    shown = true;
-  }
-  if (cast && cast.phase === PH.CHOKE) {
-    const total = C.ChokeClimbTime + C.ChokeTime;
-    showCount(total, total - (now - cast.t0), "影首縛りの術 · Étreinte de l'ombre", "", 1);
-    shown = true;
-  }
-  if (!shown) count.style.opacity = 0;
-  document.body.classList.toggle("immersed", !!(cast && cast.tech === 0 && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)));
+    showCount(C.PossessTime, C.PossessTime - (now - cast.t0), "Possession réussie", "La cible imite tes pas · ZQSD pour marcher · Clic droit : relâcher",
+      ease((now - cast.t0) / .3));
+  } else if (!steer) count.style.opacity = 0;
 
-  // ecran desature + bords d'encre en vue ombre
+  // vignettage permanent, plus fort quand on voit depuis l'ombre
   let k = 0;
-  if (cast && cast.tech === 0 && cast.phase === PH.STEER) k = ease((now - cast.t0) / C.CamDiveTime);
+  if (steer) k = ease((now - cast.t0) / C.CamDiveTime);
   else if (cam.shadow && cam.leave != null) k = 1 - ease((now - cam.leave) / .5);
-  canvas.style.filter = k > .01 ? `saturate(${1 - .62 * k}) contrast(${1 + .18 * k}) brightness(${1 - .06 * k})` : "";
-  $("veil").style.opacity = (.92 * k).toFixed(3);
+  $("veil").style.opacity = (.42 + .5 * k).toFixed(3);
+  canvas.style.filter = k > .01 ? `brightness(${1 - .1 * k}) saturate(${1 - .15 * k})` : "";
+  document.body.classList.toggle("immersed", !!(cast && (cast.phase === PH.WINDUP || steer)));
 
-  const busy = !!cast;
-  $("cancel").disabled = !busy || cast.phase === PH.RETRACT;
-  $("cast").disabled = busy && !(cast.phase === PH.BOUND && tech !== 0);
-  $("cast").textContent = busy && cast.phase === PH.BOUND && tech !== 0 ? "Enchaîner" : "Lancer";
-  if (tipTimer > 0) { tipTimer -= dt; if (tipTimer <= 0) { $("tip").textContent = "Glisse pour tourner la caméra · ZQSD pour marcher · Espace pour lancer"; } }
-  $("tip").style.opacity = cast && cast.phase === PH.STEER ? 0 : 1;
-
-  const tg = $("target");
-  const rows = enemies.map((e) => `<div class="row"><span>${e.name}${e.bound ? " · pris dans l'ombre" : e.hp <= 0 ? " · K.O." : ""}</span><div class="hp"><i style="width:${Math.max(0, e.hp)}%"></i></div></div>`).join("");
-  if (tg.innerHTML !== rows) tg.innerHTML = rows;
+  $("cancel").disabled = !cast || cast.phase === PH.RETRACT;
+  $("cast").disabled = !!cast;
+  const html = enemies.map((e) => `<div>${e.bound ? `<b>${e.name}</b> · pris dans l'ombre` : e.name}</div>`).join("");
+  if ($("target").innerHTML !== html) $("target").innerHTML = html;
 }
 
 // =====================================================================================
@@ -1478,26 +1073,21 @@ function resize() {
 addEventListener("resize", resize);
 resize();
 
-let dt60 = 1 / 60, last = performance.now();
-window.__advance = (dtv) => frame(dtv);           // pour les captures automatiques
-window.__api = { startCast, cancelCast, selectTech, view, input, hero, enemies, get cast() { return cast; }, PH };
 function frame(dt) {
-  dt60 = dt;
+  dtNow = dt;
   now += dt;
   if (cast) tickCast(dt);
   stepWorld(dt);
-  updateWeights(dt);
   hero.pose(now);
   for (const e of enemies) e.pose(now);
   updateCamera(dt);
-  const cs = camera.position;
-  camSrc = V(cs.x, -cs.z, cs.y);
-  drawShadows(now, dt);
-  stepParticles(dt);
-  pMat.uniforms.scale.value = renderer.domElement.height / (2 * Math.tan(rad(camera.fov) / 2));
-  updateHUD(dt);
+  drawShadows();
+  updateHUD();
   renderer.render(scene, camera);
 }
+window.__advance = frame;                          // pour les captures automatiques
+window.__api = { startCast, cancelCast, view, input, hero, enemies, get cast() { return cast; }, PH };
+let last = performance.now();
 function loop(t) {
   const dt = Math.min(.05, (t - last) / 1000);
   last = t;

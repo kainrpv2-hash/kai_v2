@@ -1,4 +1,4 @@
--- Nara : manipulation des ombres - chargement
+-- Nara : Kagemane no Jutsu (manipulation des ombres) - chargement
 -- Fan-made, non commercial. Naruto (c) Masashi Kishimoto / Shueisha / Studio Pierrot.
 
 NARA = NARA or {}
@@ -19,5 +19,5 @@ if SERVER then
 	include("nara_kage/sv_core.lua")
 else
 	for _, f in ipairs(CLIENT_FILES) do include(f) end
-	language.Add("weapon_nara_kage", "Hiden : Ombres (Nara)")
+	language.Add("weapon_nara_kage", "Kagemane no Jutsu")
 end

@@ -1,14 +1,12 @@
--- Nara : manipulation des ombres - code partage (serveur + client)
+-- Nara : Kagemane no Jutsu - code partage (serveur + client)
 
 NARA = NARA or {}
 NARA.Casts = NARA.Casts or {}   -- [joueur] = technique en cours (serveur : etat, client : copie + rendu)
 
 local C = NARA.Config
 
-CreateConVar("nara_kage_damage_scale", "1", bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED),
-	"Nara : multiplicateur des degats (Kubishibari, Kage Nui)")
 CreateConVar("nara_kage_affect_players", "1", bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED),
-	"Nara : les ombres peuvent attraper les joueurs (1) ou seulement les PNJ (0)")
+	"Nara : l'ombre peut attraper les joueurs (1) ou seulement les PNJ (0)")
 
 -- ---------------------------------------------------------------- sol
 
@@ -34,8 +32,7 @@ function NARA.GroundLine(a, b, step)
 	local pts = {}
 	local d = b - a
 	d.z = 0
-	local len = d:Length()
-	local n = math.max(1, math.ceil(len / step))
+	local n = math.max(1, math.ceil(d:Length() / step))
 	local last = a
 	for i = 0, n do
 		local p = a + (b - a) * (i / n)
@@ -46,9 +43,9 @@ function NARA.GroundLine(a, b, step)
 	return pts
 end
 
-function NARA.PathLength(pts, upto)
+function NARA.PathLength(pts)
 	local L = 0
-	for i = 2, upto or #pts do L = L + pts[i]:Distance(pts[i - 1]) end
+	for i = 2, #pts do L = L + pts[i]:Distance(pts[i - 1]) end
 	return L
 end
 
@@ -88,36 +85,18 @@ function NARA.IsTarget(ent, caster)
 	return false
 end
 
--- Hauteur du cou d'une cible (pour l'etreinte)
-function NARA.NeckPos(ent)
-	local b = ent:LookupBone("ValveBiped.Bip01_Neck1") or ent:LookupBone("ValveBiped.Bip01_Head1")
-	if b then
-		local p = ent:GetBonePosition(b)
-		if p and p ~= ent:GetPos() then return p end
-	end
-	local mins, maxs = ent:OBBMins(), ent:OBBMaxs()
-	return ent:GetPos() + Vector(0, 0, (maxs.z - mins.z) * 0.82)
-end
-
 -- ---------------------------------------------------------------- etats
 
 function NARA.CasterFrozen(rec)
-	local p = rec.phase
-	return p == NARA.PH_WINDUP or p == NARA.PH_STEER or p == NARA.PH_TRAVEL
-		or p == NARA.PH_CHOKE or p == NARA.PH_PIERCE
+	return rec.phase == NARA.PH_WINDUP or rec.phase == NARA.PH_STEER
 end
 
 function NARA.WantKneel(rec)
-	local p = rec.phase
-	if rec.tech == 1 then return p == NARA.PH_WINDUP or p == NARA.PH_STEER end
-	if rec.tech == 2 then return p == NARA.PH_TRAVEL or p == NARA.PH_CHOKE end
-	return false
+	return rec.phase == NARA.PH_WINDUP or rec.phase == NARA.PH_STEER
 end
 
 function NARA.WantArms(rec)
-	local p = rec.phase
-	return p == NARA.PH_WINDUP or p == NARA.PH_STEER or p == NARA.PH_TRAVEL or p == NARA.PH_BOUND
-		or p == NARA.PH_CHOKE or p == NARA.PH_PIERCE
+	return rec.phase == NARA.PH_WINDUP or rec.phase == NARA.PH_STEER or rec.phase == NARA.PH_BOUND
 end
 
 -- ---------------------------------------------------------------- commandes
@@ -151,13 +130,11 @@ hook.Add("StartCommand", "NaraKage_Cmd", function(ply, cmd)
 	if IsValid(by) then
 		cmd:ClearMovement()
 		cmd:ClearButtons()
-		if ply:GetNW2Int("NaraMode") == 1 then
-			cmd:SetForwardMove(ply:GetNW2Float("NaraMF"))
-			cmd:SetSideMove(ply:GetNW2Float("NaraMS"))
-			cmd:SetButtons(ply:GetNW2Int("NaraMB"))
-			local a = cmd:GetViewAngles()
-			a.y = ply:GetNW2Float("NaraMY")
-			cmd:SetViewAngles(a)
-		end
+		cmd:SetForwardMove(ply:GetNW2Float("NaraMF"))
+		cmd:SetSideMove(ply:GetNW2Float("NaraMS"))
+		cmd:SetButtons(ply:GetNW2Int("NaraMB"))
+		local a = cmd:GetViewAngles()
+		a.y = ply:GetNW2Float("NaraMY")
+		cmd:SetViewAngles(a)
 	end
 end)
