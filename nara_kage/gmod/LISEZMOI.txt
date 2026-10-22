@@ -41,15 +41,17 @@ En jeu
     la cible imite les deplacements du lanceur (et forme le meme sceau) pendant 10 s.
   - A 0 s sans cible : l'ombre revient dans le lanceur.
 
-  Rendu de l'ombre (d'apres la video de reference) : bande noire pleine, bord net et lisse,
-  largeur constante, pointe effilee en aiguille, flaque elliptique nette sous le lanceur
-  et sous la cible. Image assombrie et vignettage doux pendant la vue depuis l'ombre.
+  Rendu de l'ombre (d'apres la video de reference) : bande noire pleine aux courbes lisses
+  (pas de cassure dans les virages), bord doux, largeur qui respire a peine, pointe effilee
+  en aiguille. L'ombre ondule d'elle-meme comme un serpent en avancant. Petite flaque ovale
+  sous le lanceur et sous la cible. Image assombrie et vignettage doux pendant la vue depuis l'ombre.
 
 
 Reglages
 --------
   Tout est dans lua\nara_kage\sh_config.lua (commentaires en francais) :
-  duree du compteur (SteerTime = 13), vitesse, largeur de l'ombre (Width), longueur de la pointe,
+  duree du compteur (SteerTime = 13), vitesse, ondulation (SerpentAngle, 0 = ligne droite),
+  largeur de l'ombre (Width, WidthBreath), longueur de la pointe, couleur (Color),
   taille des flaques, genou pose (R ou L), position de la camera dans l'ombre, sons...
 
   Commande console (admin / serveur) :

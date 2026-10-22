@@ -208,11 +208,13 @@ local function ThinkCast(ply, rec)
 		local speed = rec.keyFwd and C.BoostSpeed or (rec.keyBack and C.SlowSpeed or C.ShadowSpeed)
 		if rec.length < C.MaxLength then
 			local before = rec.tip
-			if MoveTip(rec, Angle(0, rec.tipYaw, 0):Forward(), speed * dt) then
+			-- ondulation de serpent autour de la direction voulue
+			local wiggle = math.sin(el * 2 * math.pi / C.SerpentPeriod) * C.SerpentAngle
+			if MoveTip(rec, Angle(0, rec.tipYaw + wiggle, 0):Forward(), speed * dt) then
 				rec.length = rec.length + rec.tip:Distance(before)
 			end
 		end
-		if rec.tip:Distance(rec.path[#rec.path]) >= 7 then rec.path[#rec.path + 1] = rec.tip end
+		if rec.tip:Distance(rec.path[#rec.path]) >= 6 then rec.path[#rec.path + 1] = rec.tip end
 		if rec.crawl then rec.crawl:ChangePitch(rec.keyFwd and 118 or 100, 0.2) end
 
 		local hit = TryCatch(ply, rec)

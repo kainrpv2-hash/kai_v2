@@ -14,6 +14,8 @@ NARA.Config = {
 	BoostSpeed     = 430,   -- en maintenant Avancer (Z / W)
 	SlowSpeed      = 90,    -- en maintenant Reculer (S)
 	TurnRate       = 170,   -- vitesse de virage max de l'ombre (degres/s)
+	SerpentAngle   = 16,    -- l'ombre ondule d'elle-meme comme un serpent (degres de chaque cote, 0 = droite)
+	SerpentPeriod  = 1.6,   -- duree d'une ondulation complete (s)
 	MaxLength      = 3000,  -- longueur max de l'ombre (u)
 	CatchRadius    = 24,    -- l'ombre attrape ce qui est a cette distance de sa pointe
 	PossessTime    = 10,    -- duree de la possession une fois la cible prise (s)
@@ -24,8 +26,10 @@ NARA.Config = {
 	AffectNPCs     = true,
 
 	-- ------------------------------------------------------------ forme de l'ombre
-	Width          = 5,     -- demi-largeur de la bande (la bande fait 10 u de large)
-	TipLength      = 55,    -- longueur de la pointe effilee
+	Width          = 7,     -- demi-largeur de la bande (la bande fait 14 u de large)
+	WidthBreath    = 0.14,  -- la largeur varie doucement le long de l'ombre (0 = largeur fixe)
+	TipLength      = 60,    -- longueur de la pointe effilee
+	Color          = Color(7, 8, 11),   -- noir tres legerement froid, comme dans la video
 	PoolLength     = 22,    -- demi-longueur de la flaque sous le lanceur (vers l'avant)
 	PoolWidth      = 14,    -- demi-largeur de cette flaque
 	PoolForward    = 6,     -- la flaque est decalee vers l'avant du lanceur

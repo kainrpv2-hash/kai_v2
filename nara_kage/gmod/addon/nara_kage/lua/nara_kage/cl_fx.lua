@@ -1,6 +1,6 @@
 -- Nara : Kagemane no Jutsu - reception reseau et rendu de l'ombre
--- Style de la video de reference : bande noire pleine, bord net et lisse,
--- largeur constante, pointe effilee qui serpente au sol. Pas de fumee.
+-- Style de la video de reference : bande noire pleine aux courbes lisses, bord doux,
+-- largeur qui respire a peine, pointe effilee qui serpente au sol. Pas de fumee.
 
 NARA = NARA or {}
 local C = NARA.Config
@@ -137,17 +137,39 @@ local function Pool(center, yaw, halfLen, halfWid, alpha)
 	local F = Angle(0, yaw, 0):Forward() * halfLen
 	local S = F:Cross(UP):GetNormalized() * halfWid
 	local c = center + UP * 0.6
+	local col = C.Color
 	render.SetMaterial(MAT_POOL)
 	mesh.Begin(MATERIAL_QUADS, 1)
-	mesh.Position(c - F - S) mesh.TexCoord(0, 0, 0) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
-	mesh.Position(c + F - S) mesh.TexCoord(0, 1, 0) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
-	mesh.Position(c + F + S) mesh.TexCoord(0, 1, 1) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
-	mesh.Position(c - F + S) mesh.TexCoord(0, 0, 1) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
+	mesh.Position(c - F - S) mesh.TexCoord(0, 0, 0) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
+	mesh.Position(c + F - S) mesh.TexCoord(0, 1, 0) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
+	mesh.Position(c + F + S) mesh.TexCoord(0, 1, 1) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
+	mesh.Position(c - F + S) mesh.TexCoord(0, 0, 1) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
 	mesh.End()
 end
 
--- Bande d'ombre : largeur constante, depart evase dans la flaque, pointe effilee
-local function DrawRibbon(pts, width, alpha)
+-- Courbe lisse (Catmull-Rom) passant par les points, un point toutes les ~3 u :
+-- plus aucune cassure dans les virages
+local function Smooth(pts)
+	local n = #pts
+	if n < 3 then return pts end
+	local out = {}
+	for i = 1, n - 1 do
+		local p0, p1, p2, p3 = pts[math.max(1, i - 1)], pts[i], pts[i + 1], pts[math.min(n, i + 2)]
+		local steps = math.max(1, math.ceil(p1:Distance(p2) / 3))
+		for k = 0, steps - 1 do
+			local t = k / steps
+			local t2, t3 = t * t, t * t * t
+			out[#out + 1] = (p1 * 2 + (p2 - p0) * t + (p0 * 2 - p1 * 5 + p2 * 4 - p3) * t2 + (p1 * 3 - p0 - p2 * 3 + p3) * t3) * 0.5
+			if #out >= 4000 then return out end
+		end
+	end
+	out[#out + 1] = pts[n]
+	return out
+end
+
+-- Bande d'ombre : largeur qui respire doucement, depart evase dans la flaque, pointe en aiguille
+local function DrawRibbon(raw, width, alpha)
+	local pts = Smooth(raw)
 	local n = #pts
 	if n < 2 then return end
 	local s = { 0 }
@@ -155,6 +177,7 @@ local function DrawRibbon(pts, width, alpha)
 	local total = s[n]
 	if total < 1 then return end
 	local tipLen = math.min(C.TipLength, total * 0.6)
+	local col = C.Color
 
 	local L, R = {}, {}
 	for i = 1, n do
@@ -165,9 +188,11 @@ local function DrawRibbon(pts, width, alpha)
 		if dir:LengthSqr() < 1e-4 then dir = Vector(1, 0, 0) end
 		dir:Normalize()
 		local side = dir:Cross(UP)
-		local w = width
-		w = w * (math.Clamp((total - s[i]) / tipLen, 0, 1) ^ 0.75)   -- pointe en aiguille
-		w = w * (1 + 0.6 * (1 - math.Clamp(s[i] / 30, 0, 1)))         -- s'evase en sortant de la flaque
+		local si = s[i]
+		-- variation lente, fixee au sol (elle ne scintille pas quand l'ombre avance)
+		local w = width * (1 + C.WidthBreath * (0.6 * math.sin(si * 0.021 + 1.3) + 0.4 * math.sin(si * 0.057 + 0.4)))
+		w = w * (math.Clamp((total - si) / tipLen, 0, 1) ^ 0.6)   -- pointe en aiguille
+		w = w * (1 + 0.6 * (1 - math.Clamp(si / 30, 0, 1)))      -- s'evase en sortant de la flaque
 		local c = pts[i] + UP * 0.7
 		L[i], R[i] = c - side * w, c + side * w
 	end
@@ -175,10 +200,11 @@ local function DrawRibbon(pts, width, alpha)
 	render.SetMaterial(MAT_RIBBON)
 	mesh.Begin(MATERIAL_QUADS, n - 1)
 	for i = 1, n - 1 do
-		mesh.Position(L[i]) mesh.TexCoord(0, 0, 0) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
-		mesh.Position(L[i + 1]) mesh.TexCoord(0, 1, 0) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
-		mesh.Position(R[i + 1]) mesh.TexCoord(0, 1, 1) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
-		mesh.Position(R[i]) mesh.TexCoord(0, 0, 1) mesh.Color(0, 0, 0, alpha) mesh.AdvanceVertex()
+		local u1, u2 = s[i] / 160, s[i + 1] / 160
+		mesh.Position(L[i]) mesh.TexCoord(0, u1, 0) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
+		mesh.Position(L[i + 1]) mesh.TexCoord(0, u2, 0) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
+		mesh.Position(R[i + 1]) mesh.TexCoord(0, u2, 1) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
+		mesh.Position(R[i]) mesh.TexCoord(0, u1, 1) mesh.Color(col.r, col.g, col.b, alpha) mesh.AdvanceVertex()
 	end
 	mesh.End()
 end

@@ -37,24 +37,36 @@ def smoothstep(a, b, x):
 
 # --------------------------------------------------------------------------- textures
 
+def _wave(u, seed, terms=((2, .5), (5, .3), (9, .2))):
+    """Ondulation douce et periodique (tuile parfaitement en U)."""
+    r = np.random.default_rng(seed)
+    w = sum(a * np.sin(2 * np.pi * (f * u + r.random())) for f, a in terms)
+    return w / sum(a for _, a in terms)
+
+
 def tex_ribbon():
-    """Bande d'ombre au sol, comme dans la video : noir plein, bord net et lisse.
-    U = le long de l'ombre, V = en travers. Seul l'anticrenelage du bord adoucit."""
-    W, H = 8, 64
+    """Bande d'ombre au sol, comme dans la video : noir plein, bord doux et legerement
+    organique (ondulation lente, jamais dechiquetee). U = le long (tuile), V = en travers."""
+    W, H = 256, 64
+    u = (np.arange(W)[None, :] + 0.5) / W
     v = (np.arange(H)[:, None] + 0.5) / H
     d = np.abs(v - 0.5) * 2.0
-    a = 1.0 - smoothstep(0.86, 1.0, d)
-    return np.repeat(a, W, axis=1)
+    top = 0.88 + 0.07 * _wave(u, 3)
+    bot = 0.88 + 0.07 * _wave(u, 4)
+    thr = np.where(v < 0.5, top, bot)
+    return 1.0 - smoothstep(thr - 0.20, thr, d)
 
 
 def tex_pool():
-    """Flaque d'ombre elliptique sous le lanceur et sous la cible : disque net."""
+    """Flaque d'ombre sous le lanceur et sous la cible : ovale au bord doux, legerement bossele."""
     S = 256
     y, x = np.mgrid[0:S, 0:S]
     cx = (x + 0.5) / S * 2 - 1
     cy = (y + 0.5) / S * 2 - 1
     r = np.sqrt(cx * cx + cy * cy)
-    return 1.0 - smoothstep(0.90, 0.985, r)
+    th = (np.arctan2(cy, cx) / (2 * np.pi)) % 1.0
+    thr = 0.86 + 0.05 * _wave(th, 7, ((3, .6), (5, .4)))
+    return 1.0 - smoothstep(thr - 0.16, thr, r)
 
 
 def tex_vignette():

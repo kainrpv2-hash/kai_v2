@@ -24,7 +24,7 @@ body { background: var(--ink); color: var(--paper); font-family: var(--body); ov
   -webkit-user-select: none; user-select: none; }
 #stage { position: fixed; inset: 0; }
 #stage canvas { display: block; width: 100%; height: 100%; }
-#veil { position: fixed; inset: 0; pointer-events: none; background: var(--ink); opacity: .45;
+#veil { position: fixed; inset: 0; pointer-events: none; background: var(--ink); opacity: .62;
   -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
 
 .hud { position: fixed; pointer-events: none; z-index: 2; }
@@ -135,8 +135,8 @@ body.immersed #title, body.immersed #target, body.immersed #sound { opacity: 0; 
 // =====================================================================================
 const C = {
   WindupTime: 1.15, CamDiveTime: 0.45, SteerTime: 13, ShadowSpeed: 250, BoostSpeed: 430, SlowSpeed: 90,
-  TurnRate: 170, MaxLength: 3000, CatchRadius: 24, PossessTime: 10, RetractSpeed: 1800, Cooldown: 1.2, KneelLeg: "R",
-  Width: 5, TipLength: 55, PoolLength: 22, PoolWidth: 14, PoolForward: 6, TargetPool: 16,
+  TurnRate: 170, SerpentAngle: 16, SerpentPeriod: 1.6, MaxLength: 3000, CatchRadius: 24, PossessTime: 10, RetractSpeed: 1800, Cooldown: 1.2, KneelLeg: "R",
+  Width: 7, WidthBreath: .14, TipLength: 60, PoolLength: 22, PoolWidth: 14, PoolForward: 6, TargetPool: 16,
   CamHeight: 14, CamBack: 24, CamFOV: 95, CamPitchMin: -55, CamPitchMax: 35,
 };
 const PH = { NONE: 0, WINDUP: 1, STEER: 2, BOUND: 3, RETRACT: 4 };
@@ -177,7 +177,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.92;
+renderer.toneMappingExposure = 1.0;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -197,9 +197,9 @@ function texFrom(name, wrapS) {
 const TEX = { ribbon: texFrom("shadow_ribbon", true), pool: texFrom("shadow_pool") };
 $("veil").style.webkitMaskImage = $("veil").style.maskImage = `url(${window.NARA_TEX.shadow_vignette})`;
 
-const hemi = new THREE.HemisphereLight(0x9db6c2, 0x1f2c17, 0.62);
+const hemi = new THREE.HemisphereLight(0x8ea8b4, 0x18230f, 0.42);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xd6e8d8, 0.85);
+const sun = new THREE.DirectionalLight(0xd9ead6, 0.55);
 sun.position.copy(V(-500, 900, 1300));
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -210,6 +210,11 @@ sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.6;
 world.add(sun);
 world.add(sun.target);
+// tache de lumiere douce sur la clairiere : le centre est eclaire, les bords tombent dans l'ombre
+const glade = new THREE.SpotLight(0xe8f2d8, 1.9, 0, rad(30), 0.95, 1);
+glade.position.copy(V(-200, 150, 2200));
+glade.target.position.copy(V(0, 0, 0));
+world.add(glade); world.add(glade.target);
 
 function canvasTex(size, paint) {
   const c = document.createElement("canvas");
@@ -229,15 +234,16 @@ function blots(g, s, cols, n, rmin, rmax, amin, amax) {
   g.globalAlpha = 1;
 }
 // herbe verte et douce, presque peinte
-const grassTex = canvasTex(512, (g, s) => {
-  g.fillStyle = "#3f7a2d"; g.fillRect(0, 0, s, s);
-  blots(g, s, ["#4a8a35", "#356826", "#529440", "#2f5f22"], 900, 10, 40, .08, .22);
-  g.strokeStyle = "#3a6d28"; g.globalAlpha = .25;
-  for (let i = 0; i < 2200; i++) { const x = rand(0, s), y = rand(0, s); g.beginPath(); g.moveTo(x, y); g.lineTo(x + rand(-1.5, 1.5), y - rand(2, 5)); g.stroke(); }
-  g.globalAlpha = 1;
+const grassTex = canvasTex(1024, (g, s) => {
+  g.fillStyle = "#3f7d2e"; g.fillRect(0, 0, s, s);
+  blots(g, s, ["#4a8a37", "#376f28", "#45833a"], 500, 30, 90, .05, .12);
+  // grain fin d'herbe rase, comme le gazon de la video
+  const img = g.getImageData(0, 0, s, s), d = img.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - .5) * 22; d[i] += n * .6; d[i + 1] += n; d[i + 2] += n * .4; }
+  g.putImageData(img, 0, 0);
 });
 grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-grassTex.repeat.set(30, 30);
+grassTex.repeat.set(16, 16);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshLambertMaterial({ map: grassTex }));
 ground.receiveShadow = true;
 world.add(ground);
@@ -576,7 +582,8 @@ class Strip {
     this.geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     this.geo.setAttribute("uv", new THREE.BufferAttribute(this.uv, 2).setUsage(THREE.DynamicDrawUsage));
     this.geo.setIndex(new THREE.BufferAttribute(this.idx, 1).setUsage(THREE.DynamicDrawUsage));
-    this.mat = new THREE.MeshBasicMaterial({ map, color: 0x000000, transparent: true, opacity: 0.985, depthWrite: false,
+    // ni brouillard ni tone mapping : l'ombre reste noire meme au loin, comme dans la video
+    this.mat = new THREE.MeshBasicMaterial({ map, color: new THREE.Color(0x07080b).convertSRGBToLinear(), transparent: true, opacity: 0.985, depthWrite: false, fog: false, toneMapped: false,
       side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
     this.mesh = new THREE.Mesh(this.geo, this.mat);
     this.mesh.frustumCulled = false; this.mesh.renderOrder = order;
@@ -594,7 +601,7 @@ class Strip {
     this.geo.setDrawRange(0, this.ni);
   }
 }
-const ribbonStrip = new Strip(TEX.ribbon, 4000, 3);
+const ribbonStrip = new Strip(TEX.ribbon, 8000, 3);
 const poolStrip = new Strip(TEX.pool, 40, 2);
 const casterPoolStrip = new Strip(TEX.pool, 8, 2);
 
@@ -606,9 +613,28 @@ function pool(strip, c, yaw, halfLen, halfWid) {
   strip.quad(a, b, cc, d);
 }
 
-// largeur constante, depart evase dans la flaque, pointe effilee en aiguille
-function ribbon(pts, width) {
+// courbe lisse (Catmull-Rom), un point toutes les ~3 u : plus aucune cassure dans les virages
+function smooth(pts) {
   const n = pts.length;
+  if (n < 3) return pts;
+  const out = [];
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n - 1, i + 2)];
+    const steps = Math.max(1, Math.ceil(dist(p1, p2) / 3));
+    for (let k = 0; k < steps; k++) {
+      const t = k / steps, t2 = t * t, t3 = t2 * t;
+      const f = (a, b, c, d) => .5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (3 * b - a - 3 * c + d) * t3);
+      out.push(V(f(p0.x, p1.x, p2.x, p3.x), f(p0.y, p1.y, p2.y, p3.y), 0));
+      if (out.length >= 3800) return out;
+    }
+  }
+  out.push(pts[n - 1]);
+  return out;
+}
+
+// largeur qui respire doucement, depart evase dans la flaque, pointe en aiguille
+function ribbon(raw, width) {
+  const pts = smooth(raw), n = pts.length;
   if (n < 2) return;
   const s = [0];
   for (let i = 1; i < n; i++) s[i] = s[i - 1] + dist(pts[i], pts[i - 1]);
@@ -619,11 +645,12 @@ function ribbon(pts, width) {
   for (let i = 0; i < n; i++) {
     let dir = sub(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)]); dir.z = 0;
     dir = len(dir) < 1e-3 ? V(1, 0, 0) : nrm(dir);
-    const side = crs(dir, UP);
-    let w = width * Math.pow(clamp((total - s[i]) / tipLen, 0, 1), .75);
-    w *= 1 + .6 * (1 - clamp(s[i] / 30, 0, 1));
+    const side = crs(dir, UP), si = s[i];
+    let w = width * (1 + C.WidthBreath * (.6 * Math.sin(si * .021 + 1.3) + .4 * Math.sin(si * .057 + .4)));
+    w *= Math.pow(clamp((total - si) / tipLen, 0, 1), .6);
+    w *= 1 + .6 * (1 - clamp(si / 30, 0, 1));
     const c = V(pts[i].x, pts[i].y, .7);
-    const l = ribbonStrip.v(sub(c, mul(side, w)), s[i] / 64, 0), r = ribbonStrip.v(add(c, mul(side, w)), s[i] / 64, 1);
+    const l = ribbonStrip.v(sub(c, mul(side, w)), si / 160, 0), r = ribbonStrip.v(add(c, mul(side, w)), si / 160, 1);
     if (i > 0) ribbonStrip.quad(pl, l, r, pr);
     pl = l; pr = r;
   }
@@ -758,9 +785,11 @@ function tickCast(dt) {
     if (AUDIO.loop) AUDIO.loop.s.playbackRate.value = fast ? 1.18 : 1;
     if (cast.length < C.MaxLength) {
       const before = cast.tip;
-      if (moveTip(fwd(cast.tipYaw), speed * dt)) cast.length += dist(cast.tip, before);
+      // ondulation de serpent autour de la direction voulue
+      const wiggle = Math.sin(el * 2 * Math.PI / C.SerpentPeriod) * C.SerpentAngle;
+      if (moveTip(fwd(cast.tipYaw + wiggle), speed * dt)) cast.length += dist(cast.tip, before);
     }
-    if (dist(cast.tip, cast.path[cast.path.length - 1]) >= 7) cast.path.push(cast.tip);
+    if (dist(cast.tip, cast.path[cast.path.length - 1]) >= 6) cast.path.push(cast.tip);
     for (const e of enemies) {
       if (!e.bound && dist2D(e.pos, cast.tip) <= C.CatchRadius + 10) {
         cast.path.push(cast.tip);
@@ -859,6 +888,8 @@ function orbitCam() {
 }
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function updateCamera(dt) {
+  const ov = window.__camOverride;      // plan fixe pour les captures automatiques
+  if (ov) return setCam(ov.pos, ov.look, ov.fov || 55);
   const base = orbitCam();
   if (cast && (cast.phase === PH.WINDUP || cast.phase === PH.STEER)) {
     const el = now - cast.t0, F = fwd(cast.lockYaw), Rt = crs(F, UP);
@@ -1052,7 +1083,7 @@ function updateHUD() {
   let k = 0;
   if (steer) k = ease((now - cast.t0) / C.CamDiveTime);
   else if (cam.shadow && cam.leave != null) k = 1 - ease((now - cam.leave) / .5);
-  $("veil").style.opacity = (.42 + .5 * k).toFixed(3);
+  $("veil").style.opacity = (.62 + .33 * k).toFixed(3);
   canvas.style.filter = k > .01 ? `brightness(${1 - .1 * k}) saturate(${1 - .15 * k})` : "";
   document.body.classList.toggle("immersed", !!(cast && (cast.phase === PH.WINDUP || steer)));
 
@@ -1089,7 +1120,7 @@ window.__advance = frame;                          // pour les captures automati
 window.__api = { startCast, cancelCast, view, input, hero, enemies, get cast() { return cast; }, PH };
 let last = performance.now();
 function loop(t) {
-  const dt = Math.min(.05, (t - last) / 1000);
+  const dt = clamp((t - last) / 1000, 0, .05);   // l'horodatage de la 1re image peut preceder performance.now()
   last = t;
   if (!window.__manual) frame(dt);
   requestAnimationFrame(loop);
